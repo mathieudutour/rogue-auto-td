@@ -17,7 +17,7 @@ export interface SynergyData {
 }
 
 export const SYNERGIES: SynergyData[] = [
-  // Element synergies
+  // ── Element synergies ──────────────────────────────
   {
     id: 'fire',
     name: 'Fire',
@@ -25,6 +25,7 @@ export const SYNERGIES: SynergyData[] = [
     tiers: [
       { count: 2, description: '+20% damage', bonuses: { damageMult: 1.2 } },
       { count: 4, description: '+50% damage', bonuses: { damageMult: 1.5 } },
+      { count: 6, description: '+90% damage', bonuses: { damageMult: 1.9 } },
     ],
   },
   {
@@ -34,6 +35,7 @@ export const SYNERGIES: SynergyData[] = [
     tiers: [
       { count: 2, description: '+20% range', bonuses: { rangeMult: 1.2 } },
       { count: 4, description: '+40% range', bonuses: { rangeMult: 1.4 } },
+      { count: 6, description: '+70% range, +20% AS', bonuses: { rangeMult: 1.7, attackSpeedMult: 1.2 } },
     ],
   },
   {
@@ -42,7 +44,8 @@ export const SYNERGIES: SynergyData[] = [
     description: 'Nature champions attack faster',
     tiers: [
       { count: 2, description: '+20% attack speed', bonuses: { attackSpeedMult: 1.2 } },
-      { count: 3, description: '+40% attack speed', bonuses: { attackSpeedMult: 1.4 } },
+      { count: 4, description: '+45% attack speed', bonuses: { attackSpeedMult: 1.45 } },
+      { count: 6, description: '+75% AS, +20% damage', bonuses: { attackSpeedMult: 1.75, damageMult: 1.2 } },
     ],
   },
   {
@@ -52,16 +55,28 @@ export const SYNERGIES: SynergyData[] = [
     tiers: [
       { count: 2, description: '+30% damage', bonuses: { damageMult: 1.3 } },
       { count: 4, description: '+70% damage', bonuses: { damageMult: 1.7 } },
+      { count: 6, description: '+120% damage', bonuses: { damageMult: 2.2 } },
     ],
   },
-  // Class synergies
+  {
+    id: 'arcane',
+    name: 'Arcane',
+    description: 'Arcane champions gain damage and range',
+    tiers: [
+      { count: 2, description: '+15% damage, +15% range', bonuses: { damageMult: 1.15, rangeMult: 1.15 } },
+      { count: 4, description: '+35% damage, +30% range', bonuses: { damageMult: 1.35, rangeMult: 1.3 } },
+    ],
+  },
+
+  // ── Class synergies ────────────────────────────────
   {
     id: 'warrior',
     name: 'Warrior',
     description: 'Warriors are tougher, reducing damage taken',
     tiers: [
       { count: 2, description: '5 armor', bonuses: { armor: 5 } },
-      { count: 4, description: '15 armor', bonuses: { armor: 15 } },
+      { count: 4, description: '15 armor, +20% damage', bonuses: { armor: 15, damageMult: 1.2 } },
+      { count: 6, description: '25 armor, +40% damage', bonuses: { armor: 25, damageMult: 1.4 } },
     ],
   },
   {
@@ -71,6 +86,7 @@ export const SYNERGIES: SynergyData[] = [
     tiers: [
       { count: 2, description: '+15% AS, +10% range', bonuses: { attackSpeedMult: 1.15, rangeMult: 1.1 } },
       { count: 3, description: '+30% AS, +20% range', bonuses: { attackSpeedMult: 1.3, rangeMult: 1.2 } },
+      { count: 5, description: '+50% AS, +40% range', bonuses: { attackSpeedMult: 1.5, rangeMult: 1.4 } },
     ],
   },
   {
@@ -80,6 +96,7 @@ export const SYNERGIES: SynergyData[] = [
     tiers: [
       { count: 2, description: '+25% damage', bonuses: { damageMult: 1.25 } },
       { count: 4, description: '+60% damage', bonuses: { damageMult: 1.6 } },
+      { count: 6, description: '+100% damage, +20% range', bonuses: { damageMult: 2.0, rangeMult: 1.2 } },
     ],
   },
   {
@@ -88,7 +105,17 @@ export const SYNERGIES: SynergyData[] = [
     description: 'Assassins attack much faster',
     tiers: [
       { count: 2, description: '+30% attack speed', bonuses: { attackSpeedMult: 1.3 } },
-      { count: 3, description: '+60% attack speed', bonuses: { attackSpeedMult: 1.6 } },
+      { count: 4, description: '+65% AS, +20% damage', bonuses: { attackSpeedMult: 1.65, damageMult: 1.2 } },
+      { count: 6, description: '+100% AS, +40% damage', bonuses: { attackSpeedMult: 2.0, damageMult: 1.4 } },
+    ],
+  },
+  {
+    id: 'guardian',
+    name: 'Guardian',
+    description: 'Guardians bolster defenses and range',
+    tiers: [
+      { count: 2, description: '8 armor, +10% range', bonuses: { armor: 8, rangeMult: 1.1 } },
+      { count: 4, description: '20 armor, +25% range, +15% damage', bonuses: { armor: 20, rangeMult: 1.25, damageMult: 1.15 } },
     ],
   },
 ];

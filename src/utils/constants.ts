@@ -47,16 +47,16 @@ export const BOARD_SIZE_PER_LEVEL: Record<number, number> = {
   9: 9,
 };
 
-// Shop odds per level: probability of each cost tier [1-cost, 2-cost, 3-cost, 4-cost]
+// Shop odds per level: probability of each cost tier [1-cost, 2-cost, 3-cost, 4-cost, 5-cost]
 export const SHOP_ODDS_PER_LEVEL: Record<number, number[]> = {
-  2: [1.00, 0.00, 0.00, 0.00],
-  3: [0.70, 0.30, 0.00, 0.00],
-  4: [0.50, 0.35, 0.15, 0.00],
-  5: [0.35, 0.35, 0.25, 0.05],
-  6: [0.25, 0.30, 0.30, 0.15],
-  7: [0.15, 0.25, 0.35, 0.25],
-  8: [0.10, 0.20, 0.35, 0.35],
-  9: [0.05, 0.15, 0.30, 0.50],
+  2: [1.00, 0.00, 0.00, 0.00, 0.00],
+  3: [0.70, 0.30, 0.00, 0.00, 0.00],
+  4: [0.50, 0.35, 0.15, 0.00, 0.00],
+  5: [0.35, 0.35, 0.25, 0.05, 0.00],
+  6: [0.22, 0.30, 0.30, 0.15, 0.03],
+  7: [0.15, 0.22, 0.33, 0.25, 0.05],
+  8: [0.10, 0.18, 0.30, 0.32, 0.10],
+  9: [0.05, 0.10, 0.25, 0.40, 0.20],
 };
 
 // Star upgrade multipliers
@@ -69,6 +69,7 @@ export const POOL_SIZES: Record<number, number> = {
   2: 20,
   3: 15,
   4: 10,
+  5: 5,
 };
 
 // Colors
@@ -98,8 +99,10 @@ export const TRAIT_COLORS: Record<string, number> = {
   ice: 0x44aaff,
   nature: 0x44ff44,
   shadow: 0x9944ff,
+  arcane: 0xffaa22,
   warrior: 0xcc8844,
   ranger: 0x44cc44,
   mage: 0x4444ff,
   assassin: 0xff44ff,
+  guardian: 0x88aacc,
 };

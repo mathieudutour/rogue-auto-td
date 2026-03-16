@@ -22,16 +22,34 @@ export class BootScene extends Phaser.Scene {
   private generateChampionTextures(): void {
     // Generate a colored circle for each champion type
     const champions = [
+      // Cost 1
       { key: 'champion_fire_warrior', color: 0xff4444, letter: 'W' },
-      { key: 'champion_fire_mage', color: 0xff6644, letter: 'M' },
       { key: 'champion_ice_ranger', color: 0x44aaff, letter: 'R' },
-      { key: 'champion_ice_mage', color: 0x4488ff, letter: 'M' },
       { key: 'champion_nature_warrior', color: 0x44ff44, letter: 'W' },
+      { key: 'champion_arcane_guardian', color: 0xffaa22, letter: 'G' },
+      { key: 'champion_shadow_ranger', color: 0xbb66ff, letter: 'R' },
+      // Cost 2
+      { key: 'champion_fire_mage', color: 0xff6644, letter: 'M' },
+      { key: 'champion_ice_mage', color: 0x4488ff, letter: 'M' },
       { key: 'champion_nature_ranger', color: 0x44cc44, letter: 'R' },
+      { key: 'champion_arcane_mage', color: 0xddaa00, letter: 'M' },
+      { key: 'champion_fire_guardian', color: 0xff6633, letter: 'G' },
+      // Cost 3
       { key: 'champion_shadow_assassin', color: 0x9944ff, letter: 'A' },
       { key: 'champion_shadow_mage', color: 0x7744dd, letter: 'M' },
+      { key: 'champion_arcane_warrior', color: 0xcc8800, letter: 'W' },
+      { key: 'champion_nature_guardian', color: 0x33bb33, letter: 'G' },
+      { key: 'champion_ice_assassin', color: 0x44ccff, letter: 'A' },
+      // Cost 4
       { key: 'champion_fire_assassin', color: 0xff4488, letter: 'A' },
-      { key: 'champion_ice_warrior', color: 0x44ccff, letter: 'W' },
+      { key: 'champion_ice_warrior', color: 0x44ddff, letter: 'W' },
+      { key: 'champion_nature_assassin', color: 0x22dd22, letter: 'A' },
+      { key: 'champion_arcane_ranger', color: 0xeeaa44, letter: 'R' },
+      // Cost 5 (legendary — diamond shape)
+      { key: 'champion_fire_legendary', color: 0xff2200, letter: 'L' },
+      { key: 'champion_shadow_legendary', color: 0x6622cc, letter: 'L' },
+      { key: 'champion_ice_legendary', color: 0x2266ff, letter: 'L' },
+      { key: 'champion_nature_legendary', color: 0x118811, letter: 'L' },
     ];
 
     for (const champ of champions) {
