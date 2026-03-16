@@ -5,6 +5,7 @@ import {
   generateEnemyTextures,
   generateProjectileTextures,
   generateUITextures,
+  generateItemTextures,
 } from '../graphics/TextureGenerator';
 
 /**
@@ -21,6 +22,7 @@ export class BootScene extends Phaser.Scene {
     generateEnemyTextures(this);
     generateProjectileTextures(this);
     generateUITextures(this);
+    generateItemTextures(this);
 
     this.scene.start('GameScene');
   }

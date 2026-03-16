@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { Champion } from '../entities/Champion';
 import { COLORS, TRAIT_COLORS } from '../utils/constants';
 import { GameScene } from '../scenes/GameScene';
+import { getHeldItemName, getHeldItemColor, getHeldItemDescription, MAX_ITEMS_PER_CHAMPION } from '../data/items';
 
 const PANEL_W = 220;
 const PANEL_H = 200;
@@ -21,6 +22,7 @@ export class ChampionTooltip {
   private traitsText: Phaser.GameObjects.Text;
   private baseStatsText: Phaser.GameObjects.Text;
   private bonusStatsText: Phaser.GameObjects.Text;
+  private itemsContainer: Phaser.GameObjects.Container;
   private sellButton: Phaser.GameObjects.Container;
 
   constructor(scene: Phaser.Scene) {
@@ -81,6 +83,10 @@ export class ChampionTooltip {
     // Synergy bonus stats
     this.bonusStatsText = scene.add.text(10, 130, '', { ...style, fontSize: '11px', color: '#88ff88' });
     this.container.add(this.bonusStatsText);
+
+    // Items container (dynamically populated)
+    this.itemsContainer = scene.add.container(10, 160);
+    this.container.add(this.itemsContainer);
 
     // Sell button
     this.sellButton = this.createSellButton();
@@ -169,6 +175,31 @@ export class ChampionTooltip {
       this.bonusStatsText.setVisible(false);
     }
 
+    // Items display
+    this.itemsContainer.removeAll(true);
+    let itemsY = bonuses.length > 0 ? 150 : 130;
+    this.itemsContainer.setPosition(10, itemsY);
+
+    const hasItems = champion.items.length > 0;
+    if (hasItems) {
+      const itemLabel = this.scene.add.text(0, 0, `Items (${champion.items.length}/${MAX_ITEMS_PER_CHAMPION}):`, {
+        fontSize: '10px', color: '#ccaa44', fontFamily: 'monospace', fontStyle: 'bold',
+      });
+      this.itemsContainer.add(itemLabel);
+
+      for (let i = 0; i < champion.items.length; i++) {
+        const item = champion.items[i];
+        const name = getHeldItemName(item);
+        const color = Phaser.Display.Color.ValueToColor(getHeldItemColor(item)).rgba;
+        const itemText = this.scene.add.text(0, 14 + i * 12, `  ${name}`, {
+          fontSize: '9px', color: '#dddddd', fontFamily: 'monospace',
+        });
+        this.itemsContainer.add(itemText);
+      }
+    }
+
+    const itemsHeight = hasItems ? 14 + champion.items.length * 12 + 4 : 0;
+
     // Sell button text with gold value — hide during combat
     const gameScene = this.scene.scene.get('GameScene') as GameScene;
     const isShopping = gameScene.phase === 'shopping';
@@ -177,7 +208,9 @@ export class ChampionTooltip {
     sellText.setText(`SELL ${champion.getSellPrice()}g`);
 
     // Resize panel based on content
-    const neededH = bonuses.length > 0 ? 200 : (isShopping ? 170 : 140);
+    let neededH = bonuses.length > 0 ? 155 : 130;
+    neededH += itemsHeight;
+    if (isShopping) neededH += 36;
     this.bg.setSize(PANEL_W, neededH);
     this.border.setSize(PANEL_W, neededH);
     this.sellButton.setPosition(PANEL_W - 80, neededH - 34);

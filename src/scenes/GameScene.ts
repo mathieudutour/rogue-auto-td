@@ -11,6 +11,7 @@ import { SynergyManager } from '../systems/SynergyManager';
 import { EconomyManager } from '../systems/EconomyManager';
 import { Enemy } from '../entities/Enemy';
 import { Champion } from '../entities/Champion';
+import { HeldItem, COMPONENTS } from '../data/items';
 
 export type GamePhase = 'shopping' | 'combat';
 
@@ -35,6 +36,9 @@ export class GameScene extends Phaser.Scene {
   enemies: Enemy[] = [];
   champions: Champion[] = [];
   bench: (Champion | null)[] = [];
+
+  // Item inventory (components + combined items the player holds)
+  itemInventory: HeldItem[] = [];
 
   // Placement state
   placingChampion: Champion | null = null;
@@ -127,6 +131,15 @@ export class GameScene extends Phaser.Scene {
       const income = this.economyManager.awardWaveIncome();
       this.economyManager.addXp(2); // passive XP per wave
       this.events.emit('incomeBreakdown', income);
+    }
+
+    // Item drops: guaranteed component on waves 1,2,3, then every 3rd wave
+    if (this.waveNumber <= 3 || this.waveNumber % 3 === 0) {
+      this.dropRandomComponent();
+    }
+    // Bonus: extra component on waves 5, 10, 15... (carousel-like)
+    if (this.waveNumber > 1 && this.waveNumber % 5 === 0) {
+      this.dropRandomComponent();
     }
 
     // Roll shop
@@ -267,6 +280,15 @@ export class GameScene extends Phaser.Scene {
     // Return champion to pool
     this.shopManager.returnToPool(champion.championId, champion.starLevel);
 
+    // Return items to inventory
+    const returnedItems = champion.removeAllItems();
+    for (const item of returnedItems) {
+      this.itemInventory.push(item);
+    }
+    if (returnedItems.length > 0) {
+      this.events.emit('itemInventoryChanged', this.itemInventory);
+    }
+
     // Get gold back (TFT formula: full investment minus 1g penalty for starred non-1-cost units)
     const sellPrice = champion.getSellPrice();
     this.economyManager.addGold(sellPrice);
@@ -294,5 +316,32 @@ export class GameScene extends Phaser.Scene {
 
   getGold(): number {
     return this.economyManager.getGold();
+  }
+
+  // ── Item System ──────────────────────────────────
+
+  private dropRandomComponent(): void {
+    const idx = Math.floor(Math.random() * COMPONENTS.length);
+    const comp = COMPONENTS[idx];
+    const item: HeldItem = { isComponent: true, componentId: comp.id };
+    this.itemInventory.push(item);
+    this.events.emit('itemInventoryChanged', this.itemInventory);
+  }
+
+  /** Apply an item from inventory to a champion. Returns true on success. */
+  giveItemToChampion(inventoryIndex: number, champion: Champion): boolean {
+    if (inventoryIndex < 0 || inventoryIndex >= this.itemInventory.length) return false;
+
+    const item = this.itemInventory[inventoryIndex];
+    const result = champion.addItem(item);
+    if (result.accepted) {
+      this.itemInventory.splice(inventoryIndex, 1);
+      this.events.emit('itemInventoryChanged', this.itemInventory);
+      // Recalculate synergies to re-apply stats with items
+      this.synergyManager.calculateSynergies();
+      this.events.emit('championsChanged');
+      return true;
+    }
+    return false;
   }
 }

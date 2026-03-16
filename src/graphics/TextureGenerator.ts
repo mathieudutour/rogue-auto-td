@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { TILE_WIDTH, TILE_HEIGHT, COLORS, TRAIT_COLORS } from '../utils/constants';
+import { COMPONENTS, COMBINED_ITEMS } from '../data/items';
 
 /**
  * Generates all game textures procedurally — no external assets.
@@ -571,4 +572,52 @@ export function generateUITextures(scene: Phaser.Scene): void {
   gc.fillCircle(7, 7, 3);
   gc.generateTexture('gold_icon', 16, 16);
   gc.destroy();
+}
+
+// ─── Item Textures ──────────────────────────────────────────
+
+export function generateItemTextures(scene: Phaser.Scene): void {
+  const SIZE = 20;
+
+  // Components: rounded square with diamond icon inside
+  for (const comp of COMPONENTS) {
+    const g = scene.make.graphics({ x: 0, y: 0 });
+    // Background
+    g.fillStyle(darken(comp.color, 0.3), 1);
+    g.fillRoundedRect(1, 1, SIZE - 2, SIZE - 2, 3);
+    // Icon diamond
+    g.fillStyle(comp.color, 1);
+    const cx = SIZE / 2, cy = SIZE / 2, r = 5;
+    g.fillTriangle(cx, cy - r, cx + r, cy, cx, cy + r);
+    g.fillTriangle(cx, cy - r, cx - r, cy, cx, cy + r);
+    // Highlight
+    g.fillStyle(lighten(comp.color, 0.3), 0.4);
+    g.fillCircle(cx - 1, cy - 1, 2);
+    // Border
+    g.lineStyle(1, lighten(comp.color, 0.2), 0.8);
+    g.strokeRoundedRect(1, 1, SIZE - 2, SIZE - 2, 3);
+    g.generateTexture(`item_${comp.id}`, SIZE, SIZE);
+    g.destroy();
+  }
+
+  // Combined items: rounded square with star icon inside
+  for (const item of COMBINED_ITEMS) {
+    const g = scene.make.graphics({ x: 0, y: 0 });
+    // Background with gradient feel
+    g.fillStyle(darken(item.color, 0.2), 1);
+    g.fillRoundedRect(1, 1, SIZE - 2, SIZE - 2, 3);
+    // Inner glow
+    g.fillStyle(item.color, 0.6);
+    g.fillRoundedRect(3, 3, SIZE - 6, SIZE - 6, 2);
+    // Center jewel
+    g.fillStyle(lighten(item.color, 0.3), 1);
+    g.fillCircle(SIZE / 2, SIZE / 2, 3);
+    g.fillStyle(0xffffff, 0.4);
+    g.fillCircle(SIZE / 2 - 1, SIZE / 2 - 1, 1.5);
+    // Gold border (combined items are special)
+    g.lineStyle(1.5, 0xffdd66, 0.9);
+    g.strokeRoundedRect(1, 1, SIZE - 2, SIZE - 2, 3);
+    g.generateTexture(`item_${item.id}`, SIZE, SIZE);
+    g.destroy();
+  }
 }

@@ -3,6 +3,7 @@ import { HUD } from '../ui/HUD';
 import { ShopPanel } from '../ui/ShopPanel';
 import { SynergyBar } from '../ui/SynergyBar';
 import { ChampionTooltip } from '../ui/ChampionTooltip';
+import { ItemPanel } from '../ui/ItemPanel';
 import { GameScene } from './GameScene';
 import { BENCH_SIZE, COLORS } from '../utils/constants';
 import { tileToScreen, screenToTileRounded } from '../utils/iso';
@@ -14,6 +15,7 @@ export class UIScene extends Phaser.Scene {
   private shopPanel!: ShopPanel;
   private synergyBar!: SynergyBar;
   private tooltip!: ChampionTooltip;
+  private itemPanel!: ItemPanel;
   private benchSlots: Phaser.GameObjects.Container[] = [];
   private gameOverOverlay: Phaser.GameObjects.Container | null = null;
 
@@ -49,8 +51,10 @@ export class UIScene extends Phaser.Scene {
     this.shopPanel = new ShopPanel(this);
     this.synergyBar = new SynergyBar(this);
     this.tooltip = new ChampionTooltip(this);
+    this.itemPanel = new ItemPanel(this);
 
     this.shopPanel.setupEvents(gameScene);
+    this.itemPanel.setupEvents(gameScene);
     this.createBenchUI();
     this.createSellBin();
 
@@ -78,6 +82,7 @@ export class UIScene extends Phaser.Scene {
       this.hud.updateBoardCount(gameScene.getPlacedCount(), maxBoard);
     });
     gameScene.events.on('gameOver', (wave: number) => this.showGameOver(wave));
+    gameScene.events.on('itemInventoryChanged', (items: any[]) => this.itemPanel.update(items));
 
     // Initial UI state (pull current values since events may have fired before we listened)
     this.hud.updateGold(gameScene.getGold());
@@ -90,6 +95,7 @@ export class UIScene extends Phaser.Scene {
     this.updateBenchUI(gameScene);
     this.hud.updateLevel(gameScene.economyManager.level, gameScene.economyManager.xp, gameScene.economyManager.getXpToNextLevel(), gameScene.economyManager.getMaxBoardSize());
     this.hud.updateBoardCount(gameScene.getPlacedCount(), gameScene.economyManager.getMaxBoardSize());
+    this.itemPanel.update(gameScene.itemInventory);
 
     // Drag-and-drop input
     this.setupDragAndDrop(gameScene);
@@ -270,7 +276,7 @@ export class UIScene extends Phaser.Scene {
         }
       }
 
-      if (champion) {
+      if (champion && !this.itemPanel.isDragActive() && !this.itemPanel.isPointerOverItem(pointer.x, pointer.y, gameScene.itemInventory.length)) {
         // Prepare for potential drag (don't start yet — wait for movement)
         this.dragChampion = champion;
         this.dragFromBenchIndex = benchIndex;

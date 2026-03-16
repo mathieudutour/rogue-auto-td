@@ -2,6 +2,11 @@ import Phaser from 'phaser';
 import { GameScene } from '../scenes/GameScene';
 import { ChampionData, AttackType, AttackTypeParams } from '../data/champions';
 import { SynergyTier } from '../data/synergies';
+import {
+  HeldItem, ItemStats, MAX_ITEMS_PER_CHAMPION,
+  getHeldItemStats, getHeldItemColor, getHeldItemName,
+  findCombinedItem,
+} from '../data/items';
 import { STAR_2_MULTIPLIER, STAR_3_MULTIPLIER, COLORS } from '../utils/constants';
 
 export interface SynergyBonusState {
@@ -71,6 +76,10 @@ export class Champion {
   gridCol?: number;
   gridRow?: number;
 
+  // Items (up to 3)
+  items: HeldItem[] = [];
+  private itemDots: Phaser.GameObjects.Graphics | null = null;
+
   // Combat
   attackCooldown: number = 0;
   target: import('../entities/Enemy').Enemy | null = null;
@@ -127,6 +136,7 @@ export class Champion {
     this.starIndicator.setDepth(screenY + 3);
 
     this.attackCooldown = 0;
+    this.updateItemDots();
   }
 
   removeFromBoard(): void {
@@ -135,6 +145,7 @@ export class Champion {
     this.gridRow = undefined;
     this.sprite.setVisible(false);
     this.starIndicator.setVisible(false);
+    if (this.itemDots) { this.itemDots.destroy(); this.itemDots = null; }
     this.hideRange();
     this.target = null;
   }
@@ -200,6 +211,108 @@ export class Champion {
     this.scene.combatSystem.fireProjectile(this, target);
   }
 
+  // ── Item management ──────────────────────────────────
+
+  /** Try to add an item. If it's a component and the champion already has a component, combine them.
+   *  Returns { accepted, returnedItem? } — returnedItem is null unless no room. */
+  addItem(item: HeldItem): { accepted: boolean; combined: boolean } {
+    if (this.items.length >= MAX_ITEMS_PER_CHAMPION) return { accepted: false, combined: false };
+
+    // If adding a component and champion already holds a component, try to combine
+    if (item.isComponent) {
+      for (let i = 0; i < this.items.length; i++) {
+        const existing = this.items[i];
+        if (existing.isComponent) {
+          const combined = findCombinedItem(existing.componentId!, item.componentId!);
+          if (combined) {
+            // Replace the existing component with the combined item
+            this.items[i] = { isComponent: false, combinedId: combined.id };
+            this.applyStats();
+            this.updateItemDots();
+            return { accepted: true, combined: true };
+          }
+        }
+      }
+    }
+
+    // No combination possible — just add the item
+    this.items.push(item);
+    this.applyStats();
+    this.updateItemDots();
+    return { accepted: true, combined: false };
+  }
+
+  /** Remove all items and return them */
+  removeAllItems(): HeldItem[] {
+    const removed = [...this.items];
+    this.items = [];
+    this.applyStats();
+    this.updateItemDots();
+    return removed;
+  }
+
+  canHoldMoreItems(): boolean {
+    return this.items.length < MAX_ITEMS_PER_CHAMPION;
+  }
+
+  /** Aggregate item stats */
+  private getItemBonuses() {
+    const result = {
+      flatDamage: 0, flatRange: 0, flatAttackSpeed: 0, flatArmor: 0,
+      damageMult: 1 as number,
+      critChance: 0 as number, critMult: 1 as number,
+      splashFrac: 0 as number, splashRadius: 0 as number, splashOnHit: false,
+      burnOnHit: 0 as number, burnRadius: 50 as number,
+      bonusGoldOnKill: 0 as number,
+      slowAmount: 1, slowDuration: 0,
+    };
+    for (const item of this.items) {
+      const s = getHeldItemStats(item);
+      if (s.damage) result.flatDamage += s.damage;
+      if (s.range) result.flatRange += s.range;
+      if (s.attackSpeed) result.flatAttackSpeed += s.attackSpeed;
+      if (s.armor) result.flatArmor += s.armor;
+      if (s.damageMult) result.damageMult *= (1 + s.damageMult);
+      if (s.critChance) result.critChance = Math.min(1, result.critChance + s.critChance);
+      if (s.critMult && s.critMult > result.critMult) result.critMult = s.critMult;
+      if (s.splashFrac) {
+        result.splashOnHit = true;
+        result.splashFrac = Math.max(result.splashFrac, s.splashFrac);
+      }
+      if (s.splashRadius) result.splashRadius = Math.max(result.splashRadius, s.splashRadius);
+      if (s.burnDamage) result.burnOnHit = Math.max(result.burnOnHit, s.burnDamage);
+      if (s.bonusGoldOnKill) result.bonusGoldOnKill += s.bonusGoldOnKill;
+      if (s.slowAmount && s.slowAmount < result.slowAmount) result.slowAmount = s.slowAmount;
+      if (s.slowDuration && s.slowDuration > result.slowDuration) result.slowDuration = s.slowDuration;
+    }
+    return result;
+  }
+
+  private updateItemDots(): void {
+    if (this.itemDots) {
+      this.itemDots.destroy();
+      this.itemDots = null;
+    }
+    if (this.items.length === 0 || !this.placed) return;
+
+    this.itemDots = this.scene.add.graphics();
+    const dotSize = 3;
+    const gap = 2;
+    const totalW = this.items.length * (dotSize * 2 + gap) - gap;
+    const startX = this.sprite.x - totalW / 2;
+    const y = this.sprite.y + 12;
+
+    for (let i = 0; i < this.items.length; i++) {
+      const color = getHeldItemColor(this.items[i]);
+      const cx = startX + i * (dotSize * 2 + gap) + dotSize;
+      this.itemDots.fillStyle(color, 1);
+      this.itemDots.fillCircle(cx, y, dotSize);
+      this.itemDots.lineStyle(1, 0x000000, 0.5);
+      this.itemDots.strokeCircle(cx, y, dotSize);
+    }
+    this.itemDots.setDepth(this.sprite.depth + 2);
+  }
+
   /** TFT-style sell price: full investment minus 1g for starred units (except 1-cost) */
   getSellPrice(): number {
     const invested = this.cost * Math.pow(3, this.starLevel - 1);
@@ -220,11 +333,28 @@ export class Champion {
     this.sprite.setScale(1.2 + (this.starLevel - 1) * 0.2);
   }
 
-  /** Recalculate effective stats from base + synergy bonuses */
+  /** Recalculate effective stats from base + synergy + item bonuses */
   applyStats(): void {
-    this.damage = Math.round(this.baseDamage * this.synergyBonuses.damageMult);
-    this.range = Math.round(this.baseRange * this.synergyBonuses.rangeMult);
-    this.attackSpeed = this.baseAttackSpeed * this.synergyBonuses.attackSpeedMult;
+    const ib = this.getItemBonuses();
+    // Base × synergy multipliers + flat item bonuses
+    this.damage = Math.round((this.baseDamage + ib.flatDamage) * this.synergyBonuses.damageMult * ib.damageMult);
+    this.range = Math.round((this.baseRange + ib.flatRange) * this.synergyBonuses.rangeMult);
+    this.attackSpeed = (this.baseAttackSpeed + ib.flatAttackSpeed) * this.synergyBonuses.attackSpeedMult;
+
+    // Merge item effects into synergyBonuses so the combat system picks them up
+    this.synergyBonuses.armor += ib.flatArmor;
+    if (ib.critChance > 0) this.synergyBonuses.critChance = Math.min(1, this.synergyBonuses.critChance + ib.critChance);
+    if (ib.critMult > this.synergyBonuses.critMult) this.synergyBonuses.critMult = ib.critMult;
+    if (ib.splashOnHit) {
+      this.synergyBonuses.splashOnHit = true;
+      this.synergyBonuses.splashFrac = Math.max(this.synergyBonuses.splashFrac, ib.splashFrac);
+      this.synergyBonuses.splashRadius = Math.max(this.synergyBonuses.splashRadius, ib.splashRadius);
+    }
+    if (ib.burnOnHit > 0) {
+      this.synergyBonuses.burnOnHit = Math.max(this.synergyBonuses.burnOnHit, ib.burnOnHit);
+      this.synergyBonuses.burnRadius = Math.max(this.synergyBonuses.burnRadius, ib.burnRadius);
+    }
+    if (ib.bonusGoldOnKill > 0) this.synergyBonuses.bonusGoldOnKill += ib.bonusGoldOnKill;
   }
 
   resetSynergyBonuses(): void {
@@ -262,6 +392,7 @@ export class Champion {
   destroy(): void {
     this.sprite.destroy();
     this.starIndicator.destroy();
+    if (this.itemDots) { this.itemDots.destroy(); this.itemDots = null; }
     this.hideRange();
   }
 }
