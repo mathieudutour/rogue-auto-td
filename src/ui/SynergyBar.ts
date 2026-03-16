@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS, TRAIT_COLORS } from '../utils/constants';
+import { TRAIT_COLORS } from '../utils/constants';
 import { ActiveSynergy } from '../systems/SynergyManager';
 
 export class SynergyBar {
@@ -9,13 +9,12 @@ export class SynergyBar {
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
-    this.container = scene.add.container(8, 44);
+    this.container = scene.add.container(8, 48);
     this.container.setScrollFactor(0);
     this.container.setDepth(1000);
   }
 
   update(synergies: ActiveSynergy[]): void {
-    // Clear old entries
     for (const c of this.entryContainers) {
       c.destroy();
     }
@@ -26,7 +25,7 @@ export class SynergyBar {
       const entry = this.createEntry(0, y, syn);
       this.container.add(entry);
       this.entryContainers.push(entry);
-      y += 24;
+      y += 22;
     }
   }
 
@@ -36,33 +35,31 @@ export class SynergyBar {
     const isActive = synergy.activeTier !== null;
     const color = TRAIT_COLORS[synergy.synergy.id] || 0xcccccc;
 
-    // Color indicator dot
-    const dot = this.scene.add.circle(6, 8, 5, color, isActive ? 1 : 0.3);
+    // Compact background pill for active synergies
+    if (isActive) {
+      const pillBg = this.scene.add.rectangle(0, 2, 130, 18, color, 0.12);
+      pillBg.setOrigin(0, 0);
+      container.add(pillBg);
+    }
+
+    // Color dot
+    const dot = this.scene.add.circle(8, 11, 4, color, isActive ? 1 : 0.3);
     container.add(dot);
 
-    // Synergy name + count
+    // Count
     const tierInfo = synergy.activeTier
       ? `${synergy.count}/${synergy.activeTier.count}`
       : synergy.nextTier
         ? `${synergy.count}/${synergy.nextTier.count}`
         : `${synergy.count}`;
 
-    const text = this.scene.add.text(16, 0, `${synergy.synergy.name} (${tierInfo})`, {
-      fontSize: '11px',
-      color: isActive ? '#ffffff' : '#888888',
+    const text = this.scene.add.text(16, 3, `${synergy.synergy.name} ${tierInfo}`, {
+      fontSize: '10px',
+      color: isActive ? '#ffffff' : '#667788',
       fontFamily: 'monospace',
+      fontStyle: isActive ? 'bold' : 'normal',
     });
     container.add(text);
-
-    // Bonus description
-    if (isActive && synergy.activeTier) {
-      const bonusText = this.scene.add.text(16, 12, synergy.activeTier.description, {
-        fontSize: '9px',
-        color: '#aaffaa',
-        fontFamily: 'monospace',
-      });
-      container.add(bonusText);
-    }
 
     return container;
   }

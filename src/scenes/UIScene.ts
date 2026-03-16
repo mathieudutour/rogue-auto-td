@@ -100,11 +100,20 @@ export class UIScene extends Phaser.Scene {
 
   private createBenchUI(): void {
     const w = this.scale.width;
-    this.benchY = this.scale.height - 130;
-    this.slotSize = 34;
-    this.slotGap = 4;
+    this.benchY = this.scale.height - 148;
+    this.slotSize = 36;
+    this.slotGap = 5;
     const totalWidth = BENCH_SIZE * (this.slotSize + this.slotGap) - this.slotGap;
     this.benchStartX = (w - totalWidth) / 2;
+
+    // Bench label
+    const label = this.add.text(this.benchStartX - 2, this.benchY - 14, 'BENCH', {
+      fontSize: '9px',
+      color: '#556677',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+    });
+    label.setScrollFactor(0).setDepth(1000);
 
     for (let i = 0; i < BENCH_SIZE; i++) {
       const x = this.benchStartX + i * (this.slotSize + this.slotGap);
@@ -112,12 +121,13 @@ export class UIScene extends Phaser.Scene {
       container.setScrollFactor(0);
       container.setDepth(1000);
 
-      const bg = this.add.rectangle(0, 0, this.slotSize, this.slotSize, 0x222244, 0.8);
+      // Slot background with rounded-look border
+      const bg = this.add.rectangle(0, 0, this.slotSize, this.slotSize, 0x12162a, 0.85);
       bg.setOrigin(0, 0);
-      bg.setStrokeStyle(1, 0x4444aa, 0.5);
+      bg.setStrokeStyle(1, 0x334466, 0.6);
       container.add(bg);
 
-      // Champion icon placeholder
+      // Champion icon
       const icon = this.add.sprite(this.slotSize / 2, this.slotSize / 2, 'champion_default');
       icon.setVisible(false);
       icon.setName('icon');
@@ -128,6 +138,7 @@ export class UIScene extends Phaser.Scene {
         fontSize: '8px',
         color: '#ffd700',
         fontFamily: 'monospace',
+        fontStyle: 'bold',
       });
       starText.setOrigin(0.5, 0);
       starText.setName('starText');
@@ -140,24 +151,24 @@ export class UIScene extends Phaser.Scene {
   private createSellBin(): void {
     const w = this.scale.width;
     const h = this.scale.height;
-    const binW = 200;
-    const binH = 60;
+    const binW = 180;
+    const binH = 50;
 
-    this.sellBin = this.add.container(w / 2 - binW / 2, h - binH - 24);
+    this.sellBin = this.add.container(w / 2 - binW / 2, h - binH - 20);
     this.sellBin.setScrollFactor(0);
     this.sellBin.setDepth(1500);
     this.sellBin.setVisible(false);
 
-    this.sellBinBg = this.add.rectangle(0, 0, binW, binH, 0x881111, 0.9);
+    this.sellBinBg = this.add.rectangle(0, 0, binW, binH, 0x661111, 0.92);
     this.sellBinBg.setOrigin(0, 0);
-    this.sellBinBg.setStrokeStyle(2, 0xff4444, 0.8);
+    this.sellBinBg.setStrokeStyle(2, 0xcc3333, 0.8);
     this.sellBin.add(this.sellBinBg);
 
     this.sellBinText = this.add.text(binW / 2, binH / 2, 'SELL', {
-      fontSize: '20px',
+      fontSize: '16px',
       fontFamily: 'monospace',
       fontStyle: 'bold',
-      color: '#ffffff',
+      color: '#ff6666',
       align: 'center',
     });
     this.sellBinText.setOrigin(0.5, 0.5);

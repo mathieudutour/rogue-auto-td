@@ -15,45 +15,73 @@ export class HUD {
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
-
-    const style: Phaser.Types.GameObjects.Text.TextStyle = {
-      fontSize: '16px',
-      color: '#ffffff',
-      fontFamily: 'monospace',
-      stroke: '#000000',
-      strokeThickness: 3,
-    };
+    const w = scene.scale.width;
 
     // Top bar background
-    const bg = scene.add.rectangle(0, 0, scene.scale.width, 36, COLORS.uiBg, 0.85);
+    const bg = scene.add.rectangle(0, 0, w, 40, 0x0a0e1a, 0.92);
     bg.setOrigin(0, 0);
     bg.setScrollFactor(0);
     bg.setDepth(1000);
 
-    this.goldText = scene.add.text(12, 8, '', { ...style, color: '#ffd700' });
+    // Bottom accent line
+    const line = scene.add.rectangle(0, 40, w, 1, 0x334466, 0.6);
+    line.setOrigin(0, 0);
+    line.setScrollFactor(0);
+    line.setDepth(1000);
+
+    const baseStyle: Phaser.Types.GameObjects.Text.TextStyle = {
+      fontSize: '14px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+      stroke: '#000000',
+      strokeThickness: 2,
+    };
+
+    // Gold — left side with icon
+    this.goldText = scene.add.text(14, 12, '', {
+      ...baseStyle, fontSize: '15px', color: '#ffd700', fontStyle: 'bold',
+    });
     this.goldText.setScrollFactor(0).setDepth(1001);
 
-    this.streakText = scene.add.text(120, 8, '', { ...style, color: '#ff9944', fontSize: '13px' });
+    // Win streak indicator
+    this.streakText = scene.add.text(120, 14, '', {
+      ...baseStyle, fontSize: '12px', color: '#ff9944',
+    });
     this.streakText.setScrollFactor(0).setDepth(1001);
 
-    this.livesText = scene.add.text(200, 8, '', { ...style, color: '#ff6666' });
+    // Lives with heart-like color
+    this.livesText = scene.add.text(190, 12, '', {
+      ...baseStyle, color: '#ff6666',
+    });
     this.livesText.setScrollFactor(0).setDepth(1001);
 
-    this.waveText = scene.add.text(340, 8, '', style);
-    this.waveText.setScrollFactor(0).setDepth(1001);
+    // Wave counter — center
+    this.waveText = scene.add.text(w / 2, 12, '', {
+      ...baseStyle, fontSize: '15px', fontStyle: 'bold',
+    });
+    this.waveText.setOrigin(0.5, 0).setScrollFactor(0).setDepth(1001);
 
-    this.levelText = scene.add.text(480, 8, '', { ...style, color: '#88ccff' });
+    // Level / XP
+    this.levelText = scene.add.text(w / 2 + 100, 12, '', {
+      ...baseStyle, color: '#88bbee',
+    });
     this.levelText.setScrollFactor(0).setDepth(1001);
 
-    this.boardLimitText = scene.add.text(640, 8, '', { ...style, color: '#cccccc', fontSize: '13px' });
+    // Board count
+    this.boardLimitText = scene.add.text(w / 2 + 250, 12, '', {
+      ...baseStyle, color: '#aabbcc', fontSize: '12px',
+    });
     this.boardLimitText.setScrollFactor(0).setDepth(1001);
 
-    this.phaseText = scene.add.text(scene.scale.width - 12, 8, '', { ...style, color: '#88ff88' });
+    // Phase indicator — right side
+    this.phaseText = scene.add.text(w - 14, 12, '', {
+      ...baseStyle, color: '#88ff88', fontStyle: 'bold',
+    });
     this.phaseText.setOrigin(1, 0).setScrollFactor(0).setDepth(1001);
 
-    // Income popup (shown briefly when gold is awarded)
-    this.incomePopup = scene.add.text(12, 32, '', {
-      fontSize: '12px',
+    // Income popup
+    this.incomePopup = scene.add.text(14, 36, '', {
+      fontSize: '11px',
       color: '#ffd700',
       fontFamily: 'monospace',
       stroke: '#000000',
@@ -64,33 +92,33 @@ export class HUD {
   }
 
   updateGold(gold: number): void {
-    this.goldText.setText(`Gold: ${gold}`);
+    this.goldText.setText(`${gold}g`);
   }
 
   updateLives(lives: number): void {
-    this.livesText.setText(`Lives: ${lives}`);
+    this.livesText.setText(`${lives} HP`);
   }
 
   updateWave(wave: number): void {
-    this.waveText.setText(`Wave: ${wave}`);
+    this.waveText.setText(`Wave ${wave}`);
   }
 
   updatePhase(phase: string): void {
-    this.phaseText.setText(phase === 'shopping' ? 'SHOP PHASE' : 'COMBAT');
+    this.phaseText.setText(phase === 'shopping' ? 'SHOP' : 'COMBAT');
     this.phaseText.setColor(phase === 'shopping' ? '#88ff88' : '#ff8888');
   }
 
   updateLevel(level: number, xp: number, xpNeeded: number, maxBoard: number): void {
     if (level >= MAX_LEVEL) {
-      this.levelText.setText(`Lv ${level} (MAX)`);
+      this.levelText.setText(`Lv${level} MAX`);
     } else {
-      this.levelText.setText(`Lv ${level} (${xp}/${xpNeeded} XP)`);
+      this.levelText.setText(`Lv${level} ${xp}/${xpNeeded}xp`);
     }
   }
 
   updateBoardCount(placed: number, max: number): void {
-    this.boardLimitText.setText(`Board: ${placed}/${max}`);
-    this.boardLimitText.setColor(placed >= max ? '#ff6666' : '#cccccc');
+    this.boardLimitText.setText(`${placed}/${max}`);
+    this.boardLimitText.setColor(placed >= max ? '#ff6666' : '#aabbcc');
   }
 
   updateStreak(streak: number): void {
@@ -103,10 +131,10 @@ export class HUD {
   }
 
   showIncomeBreakdown(income: { base: number; interest: number; streak: number; total: number }): void {
-    const parts = [`+${income.base} base`];
-    if (income.interest > 0) parts.push(`+${income.interest} interest`);
+    const parts = [`+${income.base}`];
+    if (income.interest > 0) parts.push(`+${income.interest} int`);
     if (income.streak > 0) parts.push(`+${income.streak} streak`);
-    this.incomePopup.setText(parts.join('  ') + `  = +${income.total}g`);
+    this.incomePopup.setText(parts.join(' ') + ` = +${income.total}g`);
     this.incomePopup.setVisible(true);
 
     if (this.incomeTimer) this.incomeTimer.destroy();
