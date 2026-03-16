@@ -57,11 +57,12 @@ export class SynergyManager {
 
       this.activeSynergies.push({ synergy, count, activeTier, nextTier });
 
-      // Apply bonuses to champions with this trait
+      // Apply bonuses to champions with this trait (or ALL allies if allAllies flag)
       if (activeTier) {
+        const applyToAll = activeTier.bonuses.allAllies === true;
         for (const champion of this.scene.champions) {
           if (!champion.placed) continue;
-          if (champion.traits.includes(synergy.id)) {
+          if (applyToAll || champion.traits.includes(synergy.id)) {
             champion.applySynergyBonus(activeTier.bonuses);
           }
         }

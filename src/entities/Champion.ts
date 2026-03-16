@@ -1,7 +1,39 @@
 import Phaser from 'phaser';
 import { GameScene } from '../scenes/GameScene';
 import { ChampionData, AttackType, AttackTypeParams } from '../data/champions';
+import { SynergyTier } from '../data/synergies';
 import { STAR_2_MULTIPLIER, STAR_3_MULTIPLIER, COLORS } from '../utils/constants';
+
+export interface SynergyBonusState {
+  damageMult: number;
+  attackSpeedMult: number;
+  rangeMult: number;
+  armor: number;
+  // Special effects from max-tier synergies
+  critChance: number;
+  critMult: number;
+  multishot: number;
+  executeThreshold: number;
+  burnOnHit: number;
+  burnRadius: number;
+  freezeChance: number;
+  freezeDuration: number;
+  splashOnHit: boolean;
+  splashRadius: number;
+  splashFrac: number;
+  bonusGoldOnKill: number;
+  damageReflect: number;
+}
+
+function defaultBonuses(): SynergyBonusState {
+  return {
+    damageMult: 1, attackSpeedMult: 1, rangeMult: 1, armor: 0,
+    critChance: 0, critMult: 1, multishot: 0, executeThreshold: 0,
+    burnOnHit: 0, burnRadius: 0, freezeChance: 0, freezeDuration: 0,
+    splashOnHit: false, splashRadius: 0, splashFrac: 0,
+    bonusGoldOnKill: 0, damageReflect: 0,
+  };
+}
 
 export class Champion {
   scene: GameScene;
@@ -31,7 +63,7 @@ export class Champion {
   attackSpeed: number;
 
   // Synergy bonus tracking
-  synergyBonuses = { damageMult: 1, attackSpeedMult: 1, rangeMult: 1, armor: 0 };
+  synergyBonuses: SynergyBonusState = defaultBonuses();
 
   // State
   starLevel: number = 1;
@@ -196,15 +228,29 @@ export class Champion {
   }
 
   resetSynergyBonuses(): void {
-    this.synergyBonuses = { damageMult: 1, attackSpeedMult: 1, rangeMult: 1, armor: 0 };
+    this.synergyBonuses = defaultBonuses();
     this.applyStats();
   }
 
-  applySynergyBonus(bonuses: { damageMult?: number; attackSpeedMult?: number; rangeMult?: number; armor?: number }): void {
+  applySynergyBonus(bonuses: SynergyTier['bonuses']): void {
     if (bonuses.damageMult) this.synergyBonuses.damageMult *= bonuses.damageMult;
     if (bonuses.attackSpeedMult) this.synergyBonuses.attackSpeedMult *= bonuses.attackSpeedMult;
     if (bonuses.rangeMult) this.synergyBonuses.rangeMult *= bonuses.rangeMult;
     if (bonuses.armor) this.synergyBonuses.armor += bonuses.armor;
+    // Special effects (take the highest value if multiple sources)
+    if (bonuses.critChance) this.synergyBonuses.critChance = Math.max(this.synergyBonuses.critChance, bonuses.critChance);
+    if (bonuses.critMult) this.synergyBonuses.critMult = Math.max(this.synergyBonuses.critMult, bonuses.critMult);
+    if (bonuses.multishot) this.synergyBonuses.multishot = Math.max(this.synergyBonuses.multishot, bonuses.multishot);
+    if (bonuses.executeThreshold) this.synergyBonuses.executeThreshold = Math.max(this.synergyBonuses.executeThreshold, bonuses.executeThreshold);
+    if (bonuses.burnOnHit) this.synergyBonuses.burnOnHit = Math.max(this.synergyBonuses.burnOnHit, bonuses.burnOnHit);
+    if (bonuses.burnRadius) this.synergyBonuses.burnRadius = Math.max(this.synergyBonuses.burnRadius, bonuses.burnRadius);
+    if (bonuses.freezeChance) this.synergyBonuses.freezeChance = Math.max(this.synergyBonuses.freezeChance, bonuses.freezeChance);
+    if (bonuses.freezeDuration) this.synergyBonuses.freezeDuration = Math.max(this.synergyBonuses.freezeDuration, bonuses.freezeDuration);
+    if (bonuses.splashOnHit) this.synergyBonuses.splashOnHit = true;
+    if (bonuses.splashRadius) this.synergyBonuses.splashRadius = Math.max(this.synergyBonuses.splashRadius, bonuses.splashRadius);
+    if (bonuses.splashFrac) this.synergyBonuses.splashFrac = Math.max(this.synergyBonuses.splashFrac, bonuses.splashFrac);
+    if (bonuses.bonusGoldOnKill) this.synergyBonuses.bonusGoldOnKill += bonuses.bonusGoldOnKill;
+    if (bonuses.damageReflect) this.synergyBonuses.damageReflect = Math.max(this.synergyBonuses.damageReflect, bonuses.damageReflect);
     this.applyStats();
   }
 
