@@ -5,8 +5,9 @@ import { SynergyBar } from '../ui/SynergyBar';
 import { ChampionTooltip } from '../ui/ChampionTooltip';
 import { GameScene } from './GameScene';
 import { BENCH_SIZE, COLORS } from '../utils/constants';
-import { tileToScreen } from '../utils/iso';
+import { tileToScreen, screenToTileRounded } from '../utils/iso';
 import { TileType } from '../map/IsometricMap';
+import { Champion } from '../entities/Champion';
 
 export class UIScene extends Phaser.Scene {
   private hud!: HUD;
@@ -15,6 +16,18 @@ export class UIScene extends Phaser.Scene {
   private tooltip!: ChampionTooltip;
   private benchSlots: Phaser.GameObjects.Container[] = [];
   private gameOverOverlay: Phaser.GameObjects.Container | null = null;
+
+  // Drag state
+  private dragSprite: Phaser.GameObjects.Sprite | null = null;
+  private dragChampion: Champion | null = null;
+  private dragFromBenchIndex: number = -1;
+  private dragFromBoard: boolean = false;
+
+  // Bench layout constants
+  private benchY: number = 0;
+  private benchStartX: number = 0;
+  private slotSize: number = 34;
+  private slotGap: number = 4;
 
   constructor() {
     super({ key: 'UIScene' });
@@ -54,37 +67,40 @@ export class UIScene extends Phaser.Scene {
     }
     this.updateBenchUI(gameScene);
 
-    // Click handling for champion placement
-    this.setupPlacementInput(gameScene);
+    // Drag-and-drop input
+    this.setupDragAndDrop(gameScene);
+
+    // Right-click to sell on GameScene
+    this.setupSellInput(gameScene);
   }
 
   private createBenchUI(): void {
     const w = this.scale.width;
-    const benchY = this.scale.height - 130;
-    const slotSize = 34;
-    const gap = 4;
-    const totalWidth = BENCH_SIZE * (slotSize + gap) - gap;
-    const startX = (w - totalWidth) / 2;
+    this.benchY = this.scale.height - 130;
+    this.slotSize = 34;
+    this.slotGap = 4;
+    const totalWidth = BENCH_SIZE * (this.slotSize + this.slotGap) - this.slotGap;
+    this.benchStartX = (w - totalWidth) / 2;
 
     for (let i = 0; i < BENCH_SIZE; i++) {
-      const x = startX + i * (slotSize + gap);
-      const container = this.add.container(x, benchY);
+      const x = this.benchStartX + i * (this.slotSize + this.slotGap);
+      const container = this.add.container(x, this.benchY);
       container.setScrollFactor(0);
       container.setDepth(1000);
 
-      const bg = this.add.rectangle(0, 0, slotSize, slotSize, 0x222244, 0.8);
+      const bg = this.add.rectangle(0, 0, this.slotSize, this.slotSize, 0x222244, 0.8);
       bg.setOrigin(0, 0);
       bg.setStrokeStyle(1, 0x4444aa, 0.5);
       container.add(bg);
 
       // Champion icon placeholder
-      const icon = this.add.sprite(slotSize / 2, slotSize / 2, 'champion_default');
+      const icon = this.add.sprite(this.slotSize / 2, this.slotSize / 2, 'champion_default');
       icon.setVisible(false);
       icon.setName('icon');
       container.add(icon);
 
       // Star text
-      const starText = this.add.text(slotSize / 2, 2, '', {
+      const starText = this.add.text(this.slotSize / 2, 2, '', {
         fontSize: '8px',
         color: '#ffd700',
         fontFamily: 'monospace',
@@ -92,13 +108,6 @@ export class UIScene extends Phaser.Scene {
       starText.setOrigin(0.5, 0);
       starText.setName('starText');
       container.add(starText);
-
-      // Make interactive
-      bg.setInteractive({ useHandCursor: true });
-      const slotIndex = i;
-      bg.on('pointerdown', () => this.onBenchSlotClick(slotIndex));
-      bg.on('pointerover', () => this.onBenchSlotHover(slotIndex, true));
-      bg.on('pointerout', () => this.onBenchSlotHover(slotIndex, false));
 
       this.benchSlots.push(container);
     }
@@ -124,73 +133,210 @@ export class UIScene extends Phaser.Scene {
     }
   }
 
-  private onBenchSlotClick(index: number): void {
-    const gameScene = this.scene.get('GameScene') as GameScene;
-    if (gameScene.phase !== 'shopping') return;
-
-    const champion = gameScene.bench[index];
-    if (!champion) return;
-
-    if (gameScene.placingChampion === champion) {
-      // Cancel placement
-      gameScene.placingChampion = null;
-    } else {
-      // Start placing this champion
-      gameScene.placingChampion = champion;
-    }
-  }
-
-  private onBenchSlotHover(index: number, over: boolean): void {
-    const gameScene = this.scene.get('GameScene') as GameScene;
-    const champion = gameScene.bench[index];
-
-    if (over && champion) {
-      const container = this.benchSlots[index];
-      this.tooltip.show(champion, container.x, container.y);
-    } else {
-      this.tooltip.hide();
-    }
-  }
-
-  private setupPlacementInput(gameScene: GameScene): void {
-    // Listen for clicks on the game scene to place champions
-    gameScene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+  private setupDragAndDrop(gameScene: GameScene): void {
+    // We listen on this (UIScene) for all pointer events since it's the top scene
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (pointer.button !== 0) return;
       if (gameScene.phase !== 'shopping') return;
 
-      const selectedTile = gameScene.isoMap.getSelectedTile();
-      if (!selectedTile) return;
-
-      const { col, row } = selectedTile;
-
-      if (gameScene.placingChampion) {
-        // Place the champion
-        const success = gameScene.placeChampion(gameScene.placingChampion, col, row);
-        if (success) {
-          gameScene.placingChampion = null;
-          gameScene.isoMap.clearSelection();
+      // Check if clicking a bench slot
+      const benchIndex = this.getBenchSlotAt(pointer.x, pointer.y);
+      if (benchIndex >= 0) {
+        const champion = gameScene.bench[benchIndex];
+        if (champion) {
+          this.startDrag(champion, benchIndex, false, pointer);
+          return;
         }
-      } else {
-        // Check if there's a champion on this tile to pick up
-        const champOnTile = gameScene.champions.find(
-          c => c.placed && c.gridCol === col && c.gridRow === row
-        );
-        if (champOnTile) {
-          gameScene.removeChampionFromBoard(champOnTile);
-        }
+      }
+
+      // Check if clicking a champion on the board (convert screen to game world coords)
+      const worldPoint = gameScene.cameras.main.getWorldPoint(pointer.x, pointer.y);
+      const { col, row } = screenToTileRounded(worldPoint.x, worldPoint.y);
+      const champOnTile = gameScene.champions.find(
+        c => c.placed && c.gridCol === col && c.gridRow === row
+      );
+      if (champOnTile) {
+        this.startDrag(champOnTile, -1, true, pointer);
+        return;
       }
     });
 
-    // Right-click to sell
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (!this.dragSprite) return;
+
+      // Move drag sprite to follow cursor
+      this.dragSprite.setPosition(pointer.x, pointer.y);
+
+      // Highlight the tile under cursor on the game map
+      const worldPoint = gameScene.cameras.main.getWorldPoint(pointer.x, pointer.y);
+      const { col, row } = screenToTileRounded(worldPoint.x, worldPoint.y);
+
+      // Check if over a valid placement tile
+      const tileType = gameScene.isoMap.getTileType(col, row);
+      const isOccupied = gameScene.isoMap.isOccupied(col, row);
+      const isValid = tileType === TileType.Placeable && !isOccupied;
+
+      gameScene.isoMap.setDragHighlight(col, row, isValid);
+    });
+
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      if (pointer.button !== 0) return;
+      if (!this.dragChampion) return;
+
+      gameScene.isoMap.clearDragHighlight();
+
+      // Check drop target: bench slot or map tile
+      const benchIndex = this.getBenchSlotAt(pointer.x, pointer.y);
+
+      if (benchIndex >= 0) {
+        // Dropped on bench
+        this.dropOnBench(gameScene, benchIndex);
+      } else {
+        // Check if dropped on the map
+        const worldPoint = gameScene.cameras.main.getWorldPoint(pointer.x, pointer.y);
+        const { col, row } = screenToTileRounded(worldPoint.x, worldPoint.y);
+        const tileType = gameScene.isoMap.getTileType(col, row);
+        const isOccupied = gameScene.isoMap.isOccupied(col, row);
+
+        if (tileType === TileType.Placeable && !isOccupied) {
+          this.dropOnMap(gameScene, col, row);
+        } else {
+          // Invalid drop — cancel, return to original position
+          this.cancelDrag(gameScene);
+        }
+      }
+
+      this.endDrag();
+    });
+  }
+
+  private startDrag(champion: Champion, benchIndex: number, fromBoard: boolean, pointer: Phaser.Input.Pointer): void {
+    this.dragChampion = champion;
+    this.dragFromBenchIndex = benchIndex;
+    this.dragFromBoard = fromBoard;
+    this.tooltip.hide();
+
+    // Create a sprite that follows the cursor (in UIScene, screen coords)
+    this.dragSprite = this.add.sprite(pointer.x, pointer.y, champion.textureKey);
+    this.dragSprite.setScale(1.4);
+    this.dragSprite.setAlpha(0.8);
+    this.dragSprite.setDepth(2000);
+
+    // Hide the original from bench/board while dragging
+    if (fromBoard) {
+      champion.sprite.setVisible(false);
+      champion.starIndicator.setVisible(false);
+    } else {
+      // Hide bench icon
+      const container = this.benchSlots[benchIndex];
+      if (container) {
+        const icon = container.getByName('icon') as Phaser.GameObjects.Sprite;
+        icon.setVisible(false);
+      }
+    }
+  }
+
+  private dropOnMap(gameScene: GameScene, col: number, row: number): void {
+    const champion = this.dragChampion!;
+
+    if (this.dragFromBoard) {
+      // Moving from one tile to another
+      if (champion.gridCol !== undefined && champion.gridRow !== undefined) {
+        gameScene.isoMap.setOccupied(champion.gridCol, champion.gridRow, false);
+      }
+      champion.removeFromBoard();
+    } else {
+      // Moving from bench to map — remove from bench
+      const benchIdx = gameScene.bench.indexOf(champion);
+      if (benchIdx !== -1) {
+        gameScene.bench[benchIdx] = null;
+      }
+    }
+
+    gameScene.placeChampion(champion, col, row);
+  }
+
+  private dropOnBench(gameScene: GameScene, targetBenchIndex: number): void {
+    const champion = this.dragChampion!;
+    const targetSlotChamp = gameScene.bench[targetBenchIndex];
+
+    if (this.dragFromBoard) {
+      // Board → bench
+      if (targetSlotChamp === null || targetSlotChamp === undefined) {
+        gameScene.removeChampionFromBoard(champion);
+        // removeChampionFromBoard puts it in first empty slot, but we want it at targetBenchIndex
+        // Find where it was placed and swap
+        const autoIdx = gameScene.bench.indexOf(champion);
+        if (autoIdx !== -1 && autoIdx !== targetBenchIndex) {
+          gameScene.bench[autoIdx] = gameScene.bench[targetBenchIndex] ?? null;
+          gameScene.bench[targetBenchIndex] = champion;
+        }
+      } else {
+        // Target bench slot occupied — just return to board
+        champion.sprite.setVisible(true);
+        champion.starIndicator.setVisible(true);
+      }
+    } else {
+      // Bench → bench (reorder)
+      if (this.dragFromBenchIndex !== targetBenchIndex) {
+        // Swap the two bench slots
+        gameScene.bench[this.dragFromBenchIndex] = targetSlotChamp ?? null;
+        gameScene.bench[targetBenchIndex] = champion;
+      }
+    }
+
+    gameScene.events.emit('championsChanged');
+  }
+
+  private cancelDrag(gameScene: GameScene): void {
+    const champion = this.dragChampion;
+    if (!champion) return;
+
+    if (this.dragFromBoard) {
+      // Return to board — just show again
+      champion.sprite.setVisible(true);
+      champion.starIndicator.setVisible(true);
+    }
+    // Bench items: updateBenchUI will restore the icon
+    gameScene.events.emit('championsChanged');
+  }
+
+  private endDrag(): void {
+    if (this.dragSprite) {
+      this.dragSprite.destroy();
+      this.dragSprite = null;
+    }
+    this.dragChampion = null;
+    this.dragFromBenchIndex = -1;
+    this.dragFromBoard = false;
+  }
+
+  private getBenchSlotAt(screenX: number, screenY: number): number {
+    for (let i = 0; i < BENCH_SIZE; i++) {
+      const slotX = this.benchStartX + i * (this.slotSize + this.slotGap);
+      if (
+        screenX >= slotX &&
+        screenX <= slotX + this.slotSize &&
+        screenY >= this.benchY &&
+        screenY <= this.benchY + this.slotSize
+      ) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  private setupSellInput(gameScene: GameScene): void {
+    // Right-click to sell from board
     gameScene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (pointer.button !== 2) return;
       if (gameScene.phase !== 'shopping') return;
 
-      const selectedTile = gameScene.isoMap.getSelectedTile();
-      if (!selectedTile) return;
+      const worldPoint = gameScene.cameras.main.getWorldPoint(pointer.x, pointer.y);
+      const { col, row } = screenToTileRounded(worldPoint.x, worldPoint.y);
 
       const champOnTile = gameScene.champions.find(
-        c => c.placed && c.gridCol === selectedTile.col && c.gridRow === selectedTile.row
+        c => c.placed && c.gridCol === col && c.gridRow === row
       );
       if (champOnTile) {
         gameScene.sellChampion(champOnTile);

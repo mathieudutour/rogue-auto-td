@@ -20,6 +20,7 @@ export class IsometricMap {
   private tiles: TileState[][] = [];
   private hoverTile: { col: number; row: number } | null = null;
   private selectedTile: { col: number; row: number } | null = null;
+  private dragHighlightTile: { col: number; row: number } | null = null;
   private mapData: MapData;
   private container: Phaser.GameObjects.Container;
 
@@ -163,5 +164,34 @@ export class IsometricMap {
 
   getContainer(): Phaser.GameObjects.Container {
     return this.container;
+  }
+
+  /** Highlight a tile during drag-and-drop. Green if valid, red if invalid. */
+  setDragHighlight(col: number, row: number, isValid: boolean): void {
+    // Clear previous drag highlight
+    this.clearDragHighlight();
+
+    if (!this.isValidTile(col, row)) return;
+    if (this.tiles[row][col].type === TileType.Blocked) return;
+
+    this.dragHighlightTile = { col, row };
+    const tile = this.tiles[row][col];
+    const color = isValid ? 0x00ff00 : 0xff0000;
+    tile.graphic.setStrokeStyle(3, color, 1);
+    tile.graphic.setFillStyle(isValid ? 0x225522 : 0x552222, 0.9);
+  }
+
+  /** Remove the drag highlight and restore the tile's original appearance. */
+  clearDragHighlight(): void {
+    if (this.dragHighlightTile) {
+      const { col, row } = this.dragHighlightTile;
+      if (this.isValidTile(col, row)) {
+        const tile = this.tiles[row][col];
+        const { fill, stroke } = this.getTileColors(tile.type);
+        tile.graphic.setFillStyle(fill, 0.9);
+        tile.graphic.setStrokeStyle(1, stroke, 0.8);
+      }
+      this.dragHighlightTile = null;
+    }
   }
 }
