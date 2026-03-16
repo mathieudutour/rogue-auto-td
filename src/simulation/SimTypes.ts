@@ -53,6 +53,7 @@ export interface SimState {
   level: number;
   xp: number;
   waveNumber: number;
+  winStreak: number;
 
   champions: SimChampion[]; // placed on board
   bench: (SimChampion | null)[];

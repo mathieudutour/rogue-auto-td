@@ -28,6 +28,7 @@ import {
   BENCH_SIZE,
   STAR_2_MULTIPLIER,
   STAR_3_MULTIPLIER,
+  MAX_WIN_STREAK_BONUS,
 } from '../utils/constants';
 import { SimChampion, SimEnemy, SimProjectile, SimState } from './SimTypes';
 
@@ -143,6 +144,7 @@ export class SimEngine {
       level: STARTING_LEVEL,
       xp: 0,
       waveNumber: 0,
+      winStreak: 0,
       champions: [],
       bench: [],
       pool: new Map(),
@@ -628,7 +630,7 @@ export class SimEngine {
           target.health -= proj.damage;
           if (target.health <= 0) {
             target.alive = false;
-            this.state.gold += target.goldReward;
+
           }
           projectiles.splice(i, 1);
         } else {
@@ -648,15 +650,23 @@ export class SimEngine {
 
   // --- Shopping phase ---
 
-  startShoppingPhase(): ShopOffer[] {
+  startShoppingPhase(livesLostLastWave: number = 0): ShopOffer[] {
     this.state.waveNumber++;
 
     if (this.state.waveNumber > 1) {
+      // Track win/loss streak
+      if (livesLostLastWave === 0) {
+        this.state.winStreak++;
+      } else {
+        this.state.winStreak = 0;
+      }
+
       const interest = Math.min(
         Math.floor(this.state.gold / 10) * INTEREST_PER_10_GOLD,
         MAX_INTEREST
       );
-      this.state.gold += BASE_WAVE_GOLD + interest;
+      const streakBonus = Math.min(this.state.winStreak, MAX_WIN_STREAK_BONUS);
+      this.state.gold += BASE_WAVE_GOLD + interest + streakBonus;
       this.addXp(2);
     }
 
@@ -665,14 +675,16 @@ export class SimEngine {
 
   /** Run a full game with the given AI strategy. */
   runGame(strategy: AIStrategy): SimResult {
+    let lastLivesLost = 0;
     while (this.state.lives > 0) {
       // Shopping phase
-      let shop = this.startShoppingPhase();
+      let shop = this.startShoppingPhase(lastLivesLost);
       shop = strategy.shop(this, shop);
 
       // Combat phase
       const livesLost = this.simulateCombat(this.state.waveNumber);
       this.state.lives -= livesLost;
+      lastLivesLost = livesLost;
 
       if (this.state.lives <= 0) break;
 

@@ -3,7 +3,7 @@ import { IsometricMap, TileType } from '../map/IsometricMap';
 import { PathGraph } from '../map/PathGraph';
 import { MAP_1 } from '../data/maps';
 import { getMapCenter, tileToScreen } from '../utils/iso';
-import { STARTING_LIVES, STARTING_GOLD, BASE_WAVE_GOLD, COLORS } from '../utils/constants';
+import { STARTING_LIVES, STARTING_GOLD, COLORS } from '../utils/constants';
 import { WaveManager } from '../systems/WaveManager';
 import { CombatSystem } from '../systems/CombatSystem';
 import { ShopManager } from '../systems/ShopManager';
@@ -29,6 +29,7 @@ export class GameScene extends Phaser.Scene {
   phase: GamePhase = 'shopping';
   lives: number = STARTING_LIVES;
   waveNumber: number = 0;
+  private livesAtWaveStart: number = STARTING_LIVES;
 
   // Entity tracking
   enemies: Enemy[] = [];
@@ -111,10 +112,16 @@ export class GameScene extends Phaser.Scene {
 
     // Award gold and XP
     if (this.waveNumber > 1) {
-      const waveGold = BASE_WAVE_GOLD;
-      const interest = this.economyManager.calculateInterest();
-      this.economyManager.addGold(waveGold + interest);
+      // Track win/loss streak (win = no lives lost this wave)
+      if (this.lives >= this.livesAtWaveStart) {
+        this.economyManager.recordWin();
+      } else {
+        this.economyManager.recordLoss();
+      }
+
+      const income = this.economyManager.awardWaveIncome();
       this.economyManager.addXp(2); // passive XP per wave
+      this.events.emit('incomeBreakdown', income);
     }
 
     // Roll shop
@@ -128,6 +135,7 @@ export class GameScene extends Phaser.Scene {
 
   startCombatPhase(): void {
     this.phase = 'combat';
+    this.livesAtWaveStart = this.lives;
 
     // Apply synergies
     this.synergyManager.calculateSynergies();

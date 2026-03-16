@@ -7,12 +7,15 @@ import {
   BUY_XP_AMOUNT,
   XP_PER_LEVEL,
   BOARD_SIZE_PER_LEVEL,
+  BASE_WAVE_GOLD,
+  MAX_WIN_STREAK_BONUS,
 } from '../utils/constants';
 
 export class EconomyManager {
   private gold: number;
   level: number;
   xp: number = 0;
+  winStreak: number = 0;
 
   constructor(startingGold: number) {
     this.gold = startingGold;
@@ -40,6 +43,31 @@ export class EconomyManager {
   calculateInterest(): number {
     const interest = Math.floor(this.gold / 10) * INTEREST_PER_10_GOLD;
     return Math.min(interest, MAX_INTEREST);
+  }
+
+  /** Calculate streak bonus gold (1 per win, capped) */
+  getStreakBonus(): number {
+    return Math.min(this.winStreak, MAX_WIN_STREAK_BONUS);
+  }
+
+  /** Record a win (no lives lost this wave) */
+  recordWin(): void {
+    this.winStreak++;
+  }
+
+  /** Record a loss (lives lost this wave) — resets streak */
+  recordLoss(): void {
+    this.winStreak = 0;
+  }
+
+  /** Calculate and award end-of-wave income. Returns breakdown. */
+  awardWaveIncome(): { base: number; interest: number; streak: number; total: number } {
+    const base = BASE_WAVE_GOLD;
+    const interest = this.calculateInterest();
+    const streak = this.getStreakBonus();
+    const total = base + interest + streak;
+    this.addGold(total);
+    return { base, interest, streak, total };
   }
 
   /** Buy XP with gold. Returns true if purchased. */

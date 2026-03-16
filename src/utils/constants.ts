@@ -13,6 +13,7 @@ export const REROLL_COST = 2;
 export const INTEREST_PER_10_GOLD = 1;
 export const MAX_INTEREST = 5;
 export const BASE_WAVE_GOLD = 5;
+export const MAX_WIN_STREAK_BONUS = 3;
 export const BENCH_SIZE = 8;
 export const SHOP_SIZE = 5;
 

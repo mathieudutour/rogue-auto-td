@@ -62,6 +62,11 @@ export class UIScene extends Phaser.Scene {
       this.hud.updatePhase(phase);
       this.shopPanel.setVisible(phase === 'shopping');
     });
+    gameScene.events.on('incomeBreakdown', (income: { base: number; interest: number; streak: number; total: number }) => {
+      this.hud.updateGold(gameScene.economyManager.getGold());
+      this.hud.updateStreak(gameScene.economyManager.winStreak);
+      this.hud.showIncomeBreakdown(income);
+    });
     gameScene.events.on('shopUpdated', (slots: any[]) => this.shopPanel.updateSlots(slots));
     gameScene.events.on('synergiesChanged', (synergies: any[]) => this.synergyBar.update(synergies));
     gameScene.events.on('championsChanged', () => {

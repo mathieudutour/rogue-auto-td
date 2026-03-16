@@ -71,8 +71,6 @@ export class Enemy {
 
   private die(): void {
     this.alive = false;
-    this.scene.economyManager.addGold(this.goldReward);
-    this.scene.events.emit('goldChanged', this.scene.economyManager.getGold());
     this.scene.removeEnemy(this);
   }
 
