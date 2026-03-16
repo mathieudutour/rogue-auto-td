@@ -83,10 +83,11 @@ export class ShopPanel {
     container.add(card);
 
     // Name text
-    const nameText = this.scene.add.text(width / 2, 8, '', {
-      fontSize: '11px',
+    const nameText = this.scene.add.text(width / 2, 6, '', {
+      fontSize: '14px',
       color: '#ffffff',
       fontFamily: 'monospace',
+      fontStyle: 'bold',
       align: 'center',
     });
     nameText.setOrigin(0.5, 0);
@@ -94,18 +95,19 @@ export class ShopPanel {
     container.add(nameText);
 
     // Cost text
-    const costText = this.scene.add.text(width - 6, 8, '', {
-      fontSize: '11px',
+    const costText = this.scene.add.text(width - 6, 6, '', {
+      fontSize: '14px',
       color: '#ffd700',
       fontFamily: 'monospace',
+      fontStyle: 'bold',
     });
     costText.setOrigin(1, 0);
     costText.setName('costText');
     container.add(costText);
 
     // Traits text
-    const traitText = this.scene.add.text(width / 2, 28, '', {
-      fontSize: '9px',
+    const traitText = this.scene.add.text(width / 2, 26, '', {
+      fontSize: '12px',
       color: '#aaaaaa',
       fontFamily: 'monospace',
       align: 'center',
@@ -115,8 +117,8 @@ export class ShopPanel {
     container.add(traitText);
 
     // Stats text
-    const statsText = this.scene.add.text(width / 2, 45, '', {
-      fontSize: '9px',
+    const statsText = this.scene.add.text(width / 2, 44, '', {
+      fontSize: '11px',
       color: '#cccccc',
       fontFamily: 'monospace',
       align: 'center',
@@ -126,8 +128,8 @@ export class ShopPanel {
     container.add(statsText);
 
     // "BUY" text
-    const buyText = this.scene.add.text(width / 2, 72, 'BUY', {
-      fontSize: '12px',
+    const buyText = this.scene.add.text(width / 2, 70, 'BUY', {
+      fontSize: '14px',
       color: '#44ff44',
       fontFamily: 'monospace',
       fontStyle: 'bold',

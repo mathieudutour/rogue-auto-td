@@ -44,11 +44,15 @@ export class UIScene extends Phaser.Scene {
     gameScene.events.on('championsChanged', () => this.updateBenchUI(gameScene));
     gameScene.events.on('gameOver', (wave: number) => this.showGameOver(wave));
 
-    // Initial UI state
+    // Initial UI state (pull current values since events may have fired before we listened)
     this.hud.updateGold(gameScene.getGold());
     this.hud.updateLives(gameScene.lives);
     this.hud.updateWave(gameScene.waveNumber);
     this.hud.updatePhase(gameScene.phase);
+    if (gameScene.shopManager.shopSlots.length > 0) {
+      this.shopPanel.updateSlots(gameScene.shopManager.shopSlots);
+    }
+    this.updateBenchUI(gameScene);
 
     // Click handling for champion placement
     this.setupPlacementInput(gameScene);
