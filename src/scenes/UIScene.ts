@@ -27,6 +27,11 @@ export class UIScene extends Phaser.Scene {
   private isDragging: boolean = false;
   private static readonly DRAG_THRESHOLD = 6;
 
+  // Sell bin
+  private sellBin!: Phaser.GameObjects.Container;
+  private sellBinBg!: Phaser.GameObjects.Rectangle;
+  private sellBinText!: Phaser.GameObjects.Text;
+
   // Bench layout constants
   private benchY: number = 0;
   private benchStartX: number = 0;
@@ -47,6 +52,7 @@ export class UIScene extends Phaser.Scene {
 
     this.shopPanel.setupEvents(gameScene);
     this.createBenchUI();
+    this.createSellBin();
 
     // Listen to game events
     gameScene.events.on('goldChanged', (gold: number) => this.hud.updateGold(gold));
@@ -126,6 +132,62 @@ export class UIScene extends Phaser.Scene {
     }
   }
 
+  private createSellBin(): void {
+    const w = this.scale.width;
+    const h = this.scale.height;
+    const binW = 200;
+    const binH = 60;
+
+    this.sellBin = this.add.container(w / 2 - binW / 2, h - binH - 24);
+    this.sellBin.setScrollFactor(0);
+    this.sellBin.setDepth(1500);
+    this.sellBin.setVisible(false);
+
+    this.sellBinBg = this.add.rectangle(0, 0, binW, binH, 0x881111, 0.9);
+    this.sellBinBg.setOrigin(0, 0);
+    this.sellBinBg.setStrokeStyle(2, 0xff4444, 0.8);
+    this.sellBin.add(this.sellBinBg);
+
+    this.sellBinText = this.add.text(binW / 2, binH / 2, 'SELL', {
+      fontSize: '20px',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+      color: '#ffffff',
+      align: 'center',
+    });
+    this.sellBinText.setOrigin(0.5, 0.5);
+    this.sellBin.add(this.sellBinText);
+  }
+
+  private showSellBin(champion: Champion): void {
+    this.sellBinText.setText(`SELL for ${champion.cost}g`);
+    this.sellBin.setVisible(true);
+  }
+
+  private hideSellBin(): void {
+    this.sellBin.setVisible(false);
+    this.sellBinBg.setFillStyle(0x881111, 0.9);
+  }
+
+  private isOverSellBin(x: number, y: number): boolean {
+    if (!this.sellBin.visible) return false;
+    const binX = this.sellBin.x;
+    const binY = this.sellBin.y;
+    const binW = 200;
+    const binH = 60;
+    return x >= binX && x <= binX + binW && y >= binY && y <= binY + binH;
+  }
+
+  private updateSellBinHover(x: number, y: number): void {
+    if (this.isOverSellBin(x, y)) {
+      this.sellBinBg.setFillStyle(0xcc2222, 1);
+      this.sellBinBg.setStrokeStyle(3, 0xff6666, 1);
+    } else {
+      this.sellBinBg.setFillStyle(0x881111, 0.9);
+      this.sellBinBg.setStrokeStyle(2, 0xff4444, 0.8);
+    }
+  }
+
   private updateBenchUI(gameScene: GameScene): void {
     for (let i = 0; i < BENCH_SIZE; i++) {
       const container = this.benchSlots[i];
@@ -199,11 +261,15 @@ export class UIScene extends Phaser.Scene {
         this.isDragging = true;
         this.tooltip.hide();
         this.startDrag(this.dragChampion, this.dragFromBenchIndex, this.dragFromBoard, pointer);
+        this.showSellBin(this.dragChampion);
       }
 
       if (this.isDragging && this.dragSprite) {
         // Move drag sprite to follow cursor
         this.dragSprite.setPosition(pointer.x, pointer.y);
+
+        // Update sell bin hover state
+        this.updateSellBinHover(pointer.x, pointer.y);
 
         // Highlight the tile under cursor on the game map
         const worldPoint = gameScene.cameras.main.getWorldPoint(pointer.x, pointer.y);
@@ -237,6 +303,14 @@ export class UIScene extends Phaser.Scene {
 
       // It was a drag — handle drop
       gameScene.isoMap.clearDragHighlight();
+      this.hideSellBin();
+
+      // Check sell bin first
+      if (this.isOverSellBin(pointer.x, pointer.y)) {
+        this.dropOnSellBin(gameScene);
+        this.endDrag();
+        return;
+      }
 
       const benchIndex = this.getBenchSlotAt(pointer.x, pointer.y);
 
@@ -283,6 +357,19 @@ export class UIScene extends Phaser.Scene {
         icon.setVisible(false);
       }
     }
+  }
+
+  private dropOnSellBin(gameScene: GameScene): void {
+    const champion = this.dragChampion!;
+
+    // If dragging from board, need to restore visibility before selling
+    // (sellChampion handles removal from board/bench)
+    if (this.dragFromBoard) {
+      champion.sprite.setVisible(true);
+      champion.starIndicator.setVisible(true);
+    }
+
+    gameScene.sellChampion(champion);
   }
 
   private dropOnMap(gameScene: GameScene, col: number, row: number): void {
@@ -355,9 +442,11 @@ export class UIScene extends Phaser.Scene {
       this.dragSprite.destroy();
       this.dragSprite = null;
     }
+    this.hideSellBin();
     this.dragChampion = null;
     this.dragFromBenchIndex = -1;
     this.dragFromBoard = false;
+    this.isDragging = false;
   }
 
   private getBenchSlotAt(screenX: number, screenY: number): number {
