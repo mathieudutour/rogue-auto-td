@@ -94,11 +94,48 @@ export class BootScene extends Phaser.Scene {
   }
 
   private generateProjectileTexture(): void {
+    // Normal projectile (yellow)
     const g = this.make.graphics({ x: 0, y: 0 });
     g.fillStyle(0xffff00, 1);
     g.fillCircle(4, 4, 3);
     g.generateTexture('projectile', 8, 8);
     g.destroy();
+
+    // Splash projectile (orange)
+    const sp = this.make.graphics({ x: 0, y: 0 });
+    sp.fillStyle(0xff6600, 1);
+    sp.fillCircle(5, 5, 4);
+    sp.fillStyle(0xffaa00, 0.6);
+    sp.fillCircle(5, 5, 2);
+    sp.generateTexture('projectile_splash', 10, 10);
+    sp.destroy();
+
+    // Slow projectile (blue)
+    const sl = this.make.graphics({ x: 0, y: 0 });
+    sl.fillStyle(0x4488ff, 1);
+    sl.fillCircle(4, 4, 3);
+    sl.fillStyle(0xaaddff, 0.7);
+    sl.fillCircle(4, 4, 1.5);
+    sl.generateTexture('projectile_slow', 8, 8);
+    sl.destroy();
+
+    // Chain projectile (electric blue/white)
+    const ch = this.make.graphics({ x: 0, y: 0 });
+    ch.fillStyle(0x88aaff, 1);
+    ch.fillCircle(4, 4, 3);
+    ch.fillStyle(0xffffff, 0.8);
+    ch.fillCircle(4, 4, 1.5);
+    ch.generateTexture('projectile_chain', 8, 8);
+    ch.destroy();
+
+    // DoT projectile (green)
+    const dt = this.make.graphics({ x: 0, y: 0 });
+    dt.fillStyle(0x44ff44, 1);
+    dt.fillCircle(4, 4, 3);
+    dt.fillStyle(0x88ff88, 0.6);
+    dt.fillCircle(4, 4, 1.5);
+    dt.generateTexture('projectile_dot', 8, 8);
+    dt.destroy();
 
     // Range indicator (semi-transparent circle)
     const r = this.make.graphics({ x: 0, y: 0 });

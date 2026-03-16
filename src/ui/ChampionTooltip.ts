@@ -138,10 +138,14 @@ export class ChampionTooltip {
     const traitStr = champion.traits.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(' / ');
     this.traitsText.setText(traitStr);
 
+    // Attack type label
+    const attackTypeLabel = this.getAttackTypeLabel(champion);
+
     // Base stats
     this.baseStatsText.setText(
       `DMG: ${champion.baseDamage}    Range: ${champion.baseRange}\n` +
-      `ATK Spd: ${champion.baseAttackSpeed.toFixed(2)}    HP: ${champion.baseHealth}`
+      `ATK Spd: ${champion.baseAttackSpeed.toFixed(2)}    HP: ${champion.baseHealth}` +
+      (attackTypeLabel ? `\n${attackTypeLabel}` : '')
     );
 
     // Synergy bonuses (show effective stats if different from base)
@@ -197,5 +201,28 @@ export class ChampionTooltip {
 
   getChampion(): Champion | null {
     return this.champion;
+  }
+
+  private getAttackTypeLabel(champion: Champion): string {
+    const p = champion.attackTypeParams;
+    switch (champion.attackType) {
+      case 'splash': {
+        const pct = Math.round((p.splashDamageFrac ?? 0.5) * 100);
+        return `Splash: ${pct}% dmg in ${p.splashRadius ?? 50}px`;
+      }
+      case 'slow': {
+        const pct = Math.round((1 - (p.slowAmount ?? 0.5)) * 100);
+        return `Slow: ${pct}% for ${p.slowDuration ?? 1.5}s`;
+      }
+      case 'chain': {
+        return `Chain: ${p.chainCount ?? 3} bounces`;
+      }
+      case 'dot': {
+        const total = Math.round((p.dotDamage ?? 5) * (p.dotDuration ?? 3) * (p.dotTickRate ?? 2));
+        return `Poison: ${total} dmg over ${p.dotDuration ?? 3}s`;
+      }
+      default:
+        return '';
+    }
   }
 }

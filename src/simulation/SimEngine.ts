@@ -347,6 +347,8 @@ export class SimEngine {
       damage: baseDamage,
       range: baseRange,
       attackSpeed: baseAttackSpeed,
+      attackType: data.attackType || 'normal',
+      attackTypeParams: data.attackTypeParams || {},
       x: 0,
       y: 0,
       placed: false,
@@ -549,11 +551,18 @@ export class SimEngine {
                 type: data.id,
                 maxHealth: Math.round(data.health * healthMult),
                 health: Math.round(data.health * healthMult),
+                baseSpeed: data.speed,
                 speed: data.speed,
                 damage: data.damage,
                 goldReward: data.goldReward,
                 distanceTraveled: 0,
                 alive: true,
+                slowTimer: 0,
+                slowMultiplier: 1,
+                dotTimer: 0,
+                dotTickTimer: 0,
+                dotDamagePerTick: 0,
+                dotTickInterval: 0,
               });
             }
             queue.remaining--;
@@ -563,9 +572,31 @@ export class SimEngine {
         if (!anyRemaining) allSpawned = true;
       }
 
-      // Move enemies
+      // Update enemy status effects & movement
       for (const enemy of enemies) {
         if (!enemy.alive) continue;
+
+        // Update slow
+        if (enemy.slowTimer > 0) {
+          enemy.slowTimer -= dt;
+          if (enemy.slowTimer <= 0) {
+            enemy.slowMultiplier = 1;
+            enemy.speed = enemy.baseSpeed;
+          }
+        }
+
+        // Update DoT
+        if (enemy.dotTimer > 0) {
+          enemy.dotTimer -= dt;
+          enemy.dotTickTimer -= dt;
+          if (enemy.dotTickTimer <= 0 && enemy.dotTimer > 0) {
+            enemy.health -= enemy.dotDamagePerTick;
+            enemy.dotTickTimer = enemy.dotTickInterval;
+            if (enemy.health <= 0) { enemy.alive = false; continue; }
+          }
+        }
+
+        // Move
         enemy.distanceTraveled += enemy.speed * dt;
 
         if (enemy.distanceTraveled >= this.path.totalLength) {
@@ -599,12 +630,13 @@ export class SimEngine {
 
           if (bestEnemy) {
             const enemyIdx = enemies.indexOf(bestEnemy);
-            const pos = getPointAtDistance(this.path, bestEnemy.distanceTraveled);
             projectiles.push({
               targetIndex: enemyIdx,
               damage: champ.damage,
               x: champ.x,
               y: champ.y,
+              attackType: champ.attackType,
+              attackTypeParams: champ.attackTypeParams,
             });
             champ.attackCooldown = 1 / champ.attackSpeed;
           }
@@ -627,11 +659,7 @@ export class SimEngine {
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (dist < PROJECTILE_HIT_RANGE) {
-          target.health -= proj.damage;
-          if (target.health <= 0) {
-            target.alive = false;
-
-          }
+          this.applyProjectileHit(proj, target, enemies);
           projectiles.splice(i, 1);
         } else {
           const speed = PROJECTILE_SPEED * dt;
@@ -646,6 +674,97 @@ export class SimEngine {
     }
 
     return livesLost;
+  }
+
+  /** Apply projectile hit effects based on attack type */
+  private applyProjectileHit(proj: SimProjectile, target: SimEnemy, enemies: SimEnemy[]): void {
+    // Primary damage
+    target.health -= proj.damage;
+    if (target.health <= 0) target.alive = false;
+
+    const params = proj.attackTypeParams;
+
+    switch (proj.attackType) {
+      case 'splash': {
+        const radius = params.splashRadius ?? 50;
+        const frac = params.splashDamageFrac ?? 0.5;
+        const splashDmg = Math.round(proj.damage * frac);
+        const targetPos = getPointAtDistance(this.path, target.distanceTraveled);
+
+        for (const enemy of enemies) {
+          if (!enemy.alive || enemy === target) continue;
+          const pos = getPointAtDistance(this.path, enemy.distanceTraveled);
+          const dx = pos.x - targetPos.x;
+          const dy = pos.y - targetPos.y;
+          if (Math.sqrt(dx * dx + dy * dy) <= radius) {
+            enemy.health -= splashDmg;
+            if (enemy.health <= 0) enemy.alive = false;
+          }
+        }
+        break;
+      }
+
+      case 'slow': {
+        const mult = params.slowAmount ?? 0.5;
+        const dur = params.slowDuration ?? 1.5;
+        if (mult < target.slowMultiplier || target.slowTimer <= 0) {
+          target.slowMultiplier = mult;
+          target.speed = target.baseSpeed * mult;
+        }
+        target.slowTimer = Math.max(target.slowTimer, dur);
+        break;
+      }
+
+      case 'chain': {
+        const chainCount = params.chainCount ?? 3;
+        const chainRange = params.chainRange ?? 80;
+        const chainFrac = params.chainDamageFrac ?? 0.7;
+        let currentTarget = target;
+        let currentDamage = proj.damage;
+        const hit = new Set<SimEnemy>([target]);
+
+        for (let i = 0; i < chainCount; i++) {
+          currentDamage = Math.round(currentDamage * chainFrac);
+          if (currentDamage < 1) break;
+
+          const currentPos = getPointAtDistance(this.path, currentTarget.distanceTraveled);
+          let bestEnemy: SimEnemy | null = null;
+          let bestDist = Infinity;
+
+          for (const enemy of enemies) {
+            if (!enemy.alive || hit.has(enemy)) continue;
+            const pos = getPointAtDistance(this.path, enemy.distanceTraveled);
+            const dx = pos.x - currentPos.x;
+            const dy = pos.y - currentPos.y;
+            const d = Math.sqrt(dx * dx + dy * dy);
+            if (d <= chainRange && d < bestDist) {
+              bestDist = d;
+              bestEnemy = enemy;
+            }
+          }
+
+          if (!bestEnemy) break;
+          bestEnemy.health -= currentDamage;
+          if (bestEnemy.health <= 0) bestEnemy.alive = false;
+          hit.add(bestEnemy);
+          currentTarget = bestEnemy;
+        }
+        break;
+      }
+
+      case 'dot': {
+        const dotDmg = params.dotDamage ?? 5;
+        const dotDur = params.dotDuration ?? 3;
+        const dotRate = params.dotTickRate ?? 2;
+        if (dotDmg > target.dotDamagePerTick || target.dotTimer <= 0) {
+          target.dotDamagePerTick = dotDmg;
+          target.dotTickInterval = 1 / dotRate;
+        }
+        target.dotTimer = Math.max(target.dotTimer, dotDur);
+        if (target.dotTickTimer <= 0) target.dotTickTimer = target.dotTickInterval;
+        break;
+      }
+    }
   }
 
   // --- Shopping phase ---

@@ -18,6 +18,8 @@ export class CombatSystem {
       champion.sprite.y - 4,
       target,
       champion.damage,
+      champion.attackType,
+      champion.attackTypeParams,
     );
     this.projectiles.push(projectile);
   }

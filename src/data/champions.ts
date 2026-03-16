@@ -1,9 +1,26 @@
+export type AttackType = 'normal' | 'splash' | 'slow' | 'chain' | 'dot';
+
+export interface AttackTypeParams {
+  splashRadius?: number;       // splash: AoE radius in pixels
+  splashDamageFrac?: number;   // splash: fraction of damage to nearby enemies (0-1)
+  slowAmount?: number;         // slow: speed multiplier (0.5 = 50% slower)
+  slowDuration?: number;       // slow: duration in seconds
+  chainCount?: number;         // chain: number of bounces
+  chainRange?: number;         // chain: bounce range in pixels
+  chainDamageFrac?: number;    // chain: damage multiplier per bounce
+  dotDamage?: number;          // dot: damage per tick
+  dotDuration?: number;        // dot: total duration in seconds
+  dotTickRate?: number;        // dot: ticks per second
+}
+
 export interface ChampionData {
   id: string;
   name: string;
   cost: number;
   traits: string[];
   textureKey: string;
+  attackType?: AttackType;
+  attackTypeParams?: AttackTypeParams;
   stats: {
     damage: number;
     range: number;          // in pixels
@@ -28,7 +45,9 @@ export const CHAMPIONS: ChampionData[] = [
     cost: 1,
     traits: ['ice', 'ranger'],
     textureKey: 'champion_ice_ranger',
-    stats: { damage: 12, range: 130, attackSpeed: 1.0, health: 60 },
+    attackType: 'slow',
+    attackTypeParams: { slowAmount: 0.7, slowDuration: 1.0 },
+    stats: { damage: 10, range: 130, attackSpeed: 1.0, health: 60 },
   },
   {
     id: 'vine_fighter',
@@ -36,7 +55,9 @@ export const CHAMPIONS: ChampionData[] = [
     cost: 1,
     traits: ['nature', 'warrior'],
     textureKey: 'champion_nature_warrior',
-    stats: { damage: 14, range: 80, attackSpeed: 0.9, health: 90 },
+    attackType: 'dot',
+    attackTypeParams: { dotDamage: 4, dotDuration: 2.0, dotTickRate: 2 },
+    stats: { damage: 8, range: 80, attackSpeed: 0.9, health: 90 },
   },
   {
     id: 'arcane_sentinel',
@@ -62,6 +83,8 @@ export const CHAMPIONS: ChampionData[] = [
     cost: 2,
     traits: ['fire', 'mage'],
     textureKey: 'champion_fire_mage',
+    attackType: 'splash',
+    attackTypeParams: { splashRadius: 50, splashDamageFrac: 0.5 },
     stats: { damage: 25, range: 110, attackSpeed: 0.6, health: 70 },
   },
   {
@@ -70,7 +93,9 @@ export const CHAMPIONS: ChampionData[] = [
     cost: 2,
     traits: ['ice', 'mage'],
     textureKey: 'champion_ice_mage',
-    stats: { damage: 20, range: 120, attackSpeed: 0.7, health: 65 },
+    attackType: 'slow',
+    attackTypeParams: { slowAmount: 0.5, slowDuration: 1.5 },
+    stats: { damage: 18, range: 120, attackSpeed: 0.7, health: 65 },
   },
   {
     id: 'leaf_ranger',
@@ -78,7 +103,9 @@ export const CHAMPIONS: ChampionData[] = [
     cost: 2,
     traits: ['nature', 'ranger'],
     textureKey: 'champion_nature_ranger',
-    stats: { damage: 18, range: 140, attackSpeed: 1.1, health: 55 },
+    attackType: 'dot',
+    attackTypeParams: { dotDamage: 6, dotDuration: 3.0, dotTickRate: 2 },
+    stats: { damage: 12, range: 140, attackSpeed: 1.1, health: 55 },
   },
   {
     id: 'arcane_mage',
@@ -112,6 +139,8 @@ export const CHAMPIONS: ChampionData[] = [
     cost: 3,
     traits: ['shadow', 'mage'],
     textureKey: 'champion_shadow_mage',
+    attackType: 'chain',
+    attackTypeParams: { chainCount: 3, chainRange: 80, chainDamageFrac: 0.7 },
     stats: { damage: 35, range: 120, attackSpeed: 0.5, health: 75 },
   },
   {
@@ -120,7 +149,9 @@ export const CHAMPIONS: ChampionData[] = [
     cost: 3,
     traits: ['arcane', 'warrior'],
     textureKey: 'champion_arcane_warrior',
-    stats: { damage: 30, range: 85, attackSpeed: 0.85, health: 140 },
+    attackType: 'chain',
+    attackTypeParams: { chainCount: 4, chainRange: 90, chainDamageFrac: 0.65 },
+    stats: { damage: 28, range: 85, attackSpeed: 0.85, health: 140 },
   },
   {
     id: 'thorn_guardian',
@@ -128,6 +159,8 @@ export const CHAMPIONS: ChampionData[] = [
     cost: 3,
     traits: ['nature', 'guardian'],
     textureKey: 'champion_nature_guardian',
+    attackType: 'splash',
+    attackTypeParams: { splashRadius: 40, splashDamageFrac: 0.4 },
     stats: { damage: 22, range: 90, attackSpeed: 0.7, health: 180 },
   },
   {
@@ -136,7 +169,9 @@ export const CHAMPIONS: ChampionData[] = [
     cost: 3,
     traits: ['ice', 'assassin'],
     textureKey: 'champion_ice_assassin',
-    stats: { damage: 38, range: 75, attackSpeed: 1.2, health: 70 },
+    attackType: 'slow',
+    attackTypeParams: { slowAmount: 0.4, slowDuration: 1.2 },
+    stats: { damage: 35, range: 75, attackSpeed: 1.2, health: 70 },
   },
 
   // ── Cost 4 ──────────────────────────────────────────
@@ -146,6 +181,8 @@ export const CHAMPIONS: ChampionData[] = [
     cost: 4,
     traits: ['fire', 'assassin'],
     textureKey: 'champion_fire_assassin',
+    attackType: 'splash',
+    attackTypeParams: { splashRadius: 45, splashDamageFrac: 0.35 },
     stats: { damage: 55, range: 80, attackSpeed: 1.5, health: 100 },
   },
   {
@@ -154,7 +191,9 @@ export const CHAMPIONS: ChampionData[] = [
     cost: 4,
     traits: ['ice', 'warrior'],
     textureKey: 'champion_ice_warrior',
-    stats: { damage: 30, range: 90, attackSpeed: 0.7, health: 200 },
+    attackType: 'slow',
+    attackTypeParams: { slowAmount: 0.35, slowDuration: 2.0 },
+    stats: { damage: 28, range: 90, attackSpeed: 0.7, health: 200 },
   },
   {
     id: 'nature_assassin',
@@ -162,7 +201,9 @@ export const CHAMPIONS: ChampionData[] = [
     cost: 4,
     traits: ['nature', 'assassin'],
     textureKey: 'champion_nature_assassin',
-    stats: { damage: 48, range: 75, attackSpeed: 1.4, health: 90 },
+    attackType: 'dot',
+    attackTypeParams: { dotDamage: 12, dotDuration: 4.0, dotTickRate: 2 },
+    stats: { damage: 35, range: 75, attackSpeed: 1.4, health: 90 },
   },
   {
     id: 'arcane_ranger',
@@ -180,7 +221,9 @@ export const CHAMPIONS: ChampionData[] = [
     cost: 5,
     traits: ['fire', 'guardian'],
     textureKey: 'champion_fire_legendary',
-    stats: { damage: 60, range: 100, attackSpeed: 0.8, health: 300 },
+    attackType: 'splash',
+    attackTypeParams: { splashRadius: 65, splashDamageFrac: 0.6 },
+    stats: { damage: 55, range: 100, attackSpeed: 0.8, health: 300 },
   },
   {
     id: 'void_reaper',
@@ -188,7 +231,9 @@ export const CHAMPIONS: ChampionData[] = [
     cost: 5,
     traits: ['shadow', 'assassin'],
     textureKey: 'champion_shadow_legendary',
-    stats: { damage: 80, range: 85, attackSpeed: 1.6, health: 120 },
+    attackType: 'chain',
+    attackTypeParams: { chainCount: 5, chainRange: 100, chainDamageFrac: 0.75 },
+    stats: { damage: 70, range: 85, attackSpeed: 1.6, health: 120 },
   },
   {
     id: 'frost_queen',
@@ -196,7 +241,9 @@ export const CHAMPIONS: ChampionData[] = [
     cost: 5,
     traits: ['ice', 'mage'],
     textureKey: 'champion_ice_legendary',
-    stats: { damage: 50, range: 150, attackSpeed: 0.8, health: 150 },
+    attackType: 'slow',
+    attackTypeParams: { slowAmount: 0.3, slowDuration: 2.5 },
+    stats: { damage: 45, range: 150, attackSpeed: 0.8, health: 150 },
   },
   {
     id: 'elder_treant',
@@ -204,7 +251,9 @@ export const CHAMPIONS: ChampionData[] = [
     cost: 5,
     traits: ['nature', 'guardian'],
     textureKey: 'champion_nature_legendary',
-    stats: { damage: 40, range: 95, attackSpeed: 0.6, health: 400 },
+    attackType: 'dot',
+    attackTypeParams: { dotDamage: 15, dotDuration: 5.0, dotTickRate: 2 },
+    stats: { damage: 30, range: 95, attackSpeed: 0.6, health: 400 },
   },
 ];
 

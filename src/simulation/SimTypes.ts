@@ -1,5 +1,7 @@
 /** Lightweight types for headless simulation — no Phaser dependency */
 
+import { AttackType, AttackTypeParams } from '../data/champions';
+
 export interface SimChampion {
   championId: string;
   name: string;
@@ -18,6 +20,10 @@ export interface SimChampion {
   range: number;
   attackSpeed: number;
 
+  // Attack type
+  attackType: AttackType;
+  attackTypeParams: AttackTypeParams;
+
   // Position on map (screen coords for distance checks)
   x: number;
   y: number;
@@ -33,11 +39,20 @@ export interface SimEnemy {
   type: string;
   maxHealth: number;
   health: number;
+  baseSpeed: number;
   speed: number;
   damage: number;
   goldReward: number;
   distanceTraveled: number;
   alive: boolean;
+
+  // Status effects
+  slowTimer: number;
+  slowMultiplier: number;
+  dotTimer: number;
+  dotTickTimer: number;
+  dotDamagePerTick: number;
+  dotTickInterval: number;
 }
 
 export interface SimProjectile {
@@ -45,6 +60,8 @@ export interface SimProjectile {
   damage: number;
   x: number;
   y: number;
+  attackType: AttackType;
+  attackTypeParams: AttackTypeParams;
 }
 
 export interface SimState {

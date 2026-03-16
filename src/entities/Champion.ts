@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { GameScene } from '../scenes/GameScene';
-import { ChampionData } from '../data/champions';
+import { ChampionData, AttackType, AttackTypeParams } from '../data/champions';
 import { STAR_2_MULTIPLIER, STAR_3_MULTIPLIER, COLORS } from '../utils/constants';
 
 export class Champion {
@@ -14,6 +14,10 @@ export class Champion {
   cost: number;
   traits: string[];
   textureKey: string;
+
+  // Attack type
+  attackType: AttackType;
+  attackTypeParams: AttackTypeParams;
 
   // Base stats (before synergy bonuses)
   baseDamage: number;
@@ -47,6 +51,8 @@ export class Champion {
     this.cost = data.cost;
     this.traits = [...data.traits];
     this.textureKey = data.textureKey;
+    this.attackType = data.attackType || 'normal';
+    this.attackTypeParams = data.attackTypeParams || {};
 
     this.baseDamage = data.stats.damage;
     this.baseRange = data.stats.range;
