@@ -168,6 +168,13 @@ export class Champion {
     this.scene.combatSystem.fireProjectile(this, target);
   }
 
+  /** TFT-style sell price: full investment minus 1g for starred units (except 1-cost) */
+  getSellPrice(): number {
+    const invested = this.cost * Math.pow(3, this.starLevel - 1);
+    if (this.starLevel === 1 || this.cost === 1) return invested;
+    return invested - 1;
+  }
+
   /** Upgrade star level (called when 3 copies merge) */
   evolve(): void {
     this.starLevel++;

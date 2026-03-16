@@ -267,8 +267,8 @@ export class GameScene extends Phaser.Scene {
     // Return champion to pool
     this.shopManager.returnToPool(champion.championId, champion.starLevel);
 
-    // Get gold back (full investment like TFT: cost × 3^(starLevel-1))
-    const sellPrice = champion.cost * Math.pow(3, champion.starLevel - 1);
+    // Get gold back (TFT formula: full investment minus 1g penalty for starred non-1-cost units)
+    const sellPrice = champion.getSellPrice();
     this.economyManager.addGold(sellPrice);
 
     champion.destroy();
