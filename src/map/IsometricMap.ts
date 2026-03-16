@@ -54,7 +54,6 @@ export class IsometricMap {
         const { fill, stroke } = this.getTileColors(type);
         const polygon = this.scene.add.polygon(x, y, points, fill, 0.9);
         polygon.setStrokeStyle(1, stroke, 0.8);
-        polygon.setOrigin(0.5, 0.5);
         polygon.setDepth(y);
         this.container.add(polygon);
 
