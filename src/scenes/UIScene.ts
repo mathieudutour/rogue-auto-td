@@ -22,6 +22,10 @@ export class UIScene extends Phaser.Scene {
   private dragChampion: Champion | null = null;
   private dragFromBenchIndex: number = -1;
   private dragFromBoard: boolean = false;
+  private dragStartX: number = 0;
+  private dragStartY: number = 0;
+  private isDragging: boolean = false;
+  private static readonly DRAG_THRESHOLD = 6;
 
   // Bench layout constants
   private benchY: number = 0;
@@ -148,60 +152,97 @@ export class UIScene extends Phaser.Scene {
       if (pointer.button !== 0) return;
       if (gameScene.phase !== 'shopping') return;
 
-      // Check if clicking a bench slot
-      const benchIndex = this.getBenchSlotAt(pointer.x, pointer.y);
-      if (benchIndex >= 0) {
-        const champion = gameScene.bench[benchIndex];
-        if (champion) {
-          this.startDrag(champion, benchIndex, false, pointer);
-          return;
+      // Find which champion was clicked (bench or board)
+      let champion: Champion | null = null;
+      let benchIndex = -1;
+      let fromBoard = false;
+
+      const benchIdx = this.getBenchSlotAt(pointer.x, pointer.y);
+      if (benchIdx >= 0) {
+        champion = gameScene.bench[benchIdx] ?? null;
+        benchIndex = benchIdx;
+      } else {
+        const worldPoint = gameScene.cameras.main.getWorldPoint(pointer.x, pointer.y);
+        const { col, row } = screenToTileRounded(worldPoint.x, worldPoint.y);
+        const champOnTile = gameScene.champions.find(
+          c => c.placed && c.gridCol === col && c.gridRow === row
+        );
+        if (champOnTile) {
+          champion = champOnTile;
+          fromBoard = true;
         }
       }
 
-      // Check if clicking a champion on the board (convert screen to game world coords)
-      const worldPoint = gameScene.cameras.main.getWorldPoint(pointer.x, pointer.y);
-      const { col, row } = screenToTileRounded(worldPoint.x, worldPoint.y);
-      const champOnTile = gameScene.champions.find(
-        c => c.placed && c.gridCol === col && c.gridRow === row
-      );
-      if (champOnTile) {
-        this.startDrag(champOnTile, -1, true, pointer);
-        return;
+      if (champion) {
+        // Prepare for potential drag (don't start yet — wait for movement)
+        this.dragChampion = champion;
+        this.dragFromBenchIndex = benchIndex;
+        this.dragFromBoard = fromBoard;
+        this.dragStartX = pointer.x;
+        this.dragStartY = pointer.y;
+        this.isDragging = false;
+      } else {
+        // Clicked empty space — hide tooltip
+        this.tooltip.hide();
       }
     });
 
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (!this.dragSprite) return;
+      if (!this.dragChampion) return;
 
-      // Move drag sprite to follow cursor
-      this.dragSprite.setPosition(pointer.x, pointer.y);
+      const dx = pointer.x - this.dragStartX;
+      const dy = pointer.y - this.dragStartY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
 
-      // Highlight the tile under cursor on the game map
-      const worldPoint = gameScene.cameras.main.getWorldPoint(pointer.x, pointer.y);
-      const { col, row } = screenToTileRounded(worldPoint.x, worldPoint.y);
+      // Start drag only after threshold
+      if (!this.isDragging && dist >= UIScene.DRAG_THRESHOLD) {
+        this.isDragging = true;
+        this.tooltip.hide();
+        this.startDrag(this.dragChampion, this.dragFromBenchIndex, this.dragFromBoard, pointer);
+      }
 
-      // Check if over a valid placement tile
-      const tileType = gameScene.isoMap.getTileType(col, row);
-      const isOccupied = gameScene.isoMap.isOccupied(col, row);
-      const isValid = tileType === TileType.Placeable && !isOccupied;
+      if (this.isDragging && this.dragSprite) {
+        // Move drag sprite to follow cursor
+        this.dragSprite.setPosition(pointer.x, pointer.y);
 
-      gameScene.isoMap.setDragHighlight(col, row, isValid);
+        // Highlight the tile under cursor on the game map
+        const worldPoint = gameScene.cameras.main.getWorldPoint(pointer.x, pointer.y);
+        const { col, row } = screenToTileRounded(worldPoint.x, worldPoint.y);
+
+        const tileType = gameScene.isoMap.getTileType(col, row);
+        const isOccupied = gameScene.isoMap.isOccupied(col, row);
+        const isValid = tileType === TileType.Placeable && !isOccupied;
+
+        gameScene.isoMap.setDragHighlight(col, row, isValid);
+      }
     });
 
     this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
       if (pointer.button !== 0) return;
       if (!this.dragChampion) return;
 
+      if (!this.isDragging) {
+        // It was a click, not a drag — show/toggle tooltip
+        const champion = this.dragChampion;
+        if (this.tooltip.isVisible() && this.tooltip.getChampion() === champion) {
+          this.tooltip.hide();
+        } else {
+          this.tooltip.show(champion, pointer.x, pointer.y);
+        }
+        this.dragChampion = null;
+        this.dragFromBenchIndex = -1;
+        this.dragFromBoard = false;
+        return;
+      }
+
+      // It was a drag — handle drop
       gameScene.isoMap.clearDragHighlight();
 
-      // Check drop target: bench slot or map tile
       const benchIndex = this.getBenchSlotAt(pointer.x, pointer.y);
 
       if (benchIndex >= 0) {
-        // Dropped on bench
         this.dropOnBench(gameScene, benchIndex);
       } else {
-        // Check if dropped on the map
         const worldPoint = gameScene.cameras.main.getWorldPoint(pointer.x, pointer.y);
         const { col, row } = screenToTileRounded(worldPoint.x, worldPoint.y);
         const tileType = gameScene.isoMap.getTileType(col, row);
@@ -210,7 +251,6 @@ export class UIScene extends Phaser.Scene {
         if (tileType === TileType.Placeable && !isOccupied) {
           this.dropOnMap(gameScene, col, row);
         } else {
-          // Invalid drop — cancel, return to original position
           this.cancelDrag(gameScene);
         }
       }
