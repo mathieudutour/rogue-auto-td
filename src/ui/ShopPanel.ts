@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS, REROLL_COST, TRAIT_COLORS } from '../utils/constants';
+import { COLORS, REROLL_COST, BUY_XP_COST, BUY_XP_AMOUNT, TRAIT_COLORS } from '../utils/constants';
 import { ShopSlot } from '../systems/ShopManager';
 import { GameScene } from '../scenes/GameScene';
 
@@ -9,6 +9,7 @@ export class ShopPanel {
   private slotContainers: Phaser.GameObjects.Container[] = [];
   private startButton!: Phaser.GameObjects.Container;
   private rerollButton!: Phaser.GameObjects.Container;
+  private buyXpButton!: Phaser.GameObjects.Container;
   private visible: boolean = true;
 
   constructor(scene: Phaser.Scene) {
@@ -50,12 +51,23 @@ export class ShopPanel {
       this.container.add(slotContainer);
     }
 
+    // Buy XP button
+    this.buyXpButton = this.createButton(
+      startX - 185,
+      panelY + 10,
+      85,
+      36,
+      `Buy XP\n(${BUY_XP_COST}g)`,
+      0x8e44ad,
+    );
+    this.container.add(this.buyXpButton);
+
     // Reroll button
     this.rerollButton = this.createButton(
-      startX - 90,
-      panelY + 30,
-      80,
-      40,
+      startX - 185,
+      panelY + 56,
+      85,
+      36,
       `Reroll\n(${REROLL_COST}g)`,
       0x2980b9,
     );
@@ -176,6 +188,13 @@ export class ShopPanel {
   }
 
   setupEvents(gameScene: GameScene): void {
+    // Buy XP click
+    const buyXpBg = this.buyXpButton.list[0] as Phaser.GameObjects.Rectangle;
+    buyXpBg.on('pointerdown', () => {
+      if (gameScene.phase !== 'shopping') return;
+      gameScene.buyXp();
+    });
+
     // Reroll click
     const rerollBg = this.rerollButton.list[0] as Phaser.GameObjects.Rectangle;
     rerollBg.on('pointerdown', () => {

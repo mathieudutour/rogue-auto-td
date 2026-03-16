@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS } from '../utils/constants';
+import { COLORS, MAX_LEVEL } from '../utils/constants';
 
 export class HUD {
   private scene: Phaser.Scene;
@@ -7,6 +7,8 @@ export class HUD {
   private livesText: Phaser.GameObjects.Text;
   private waveText: Phaser.GameObjects.Text;
   private phaseText: Phaser.GameObjects.Text;
+  private levelText: Phaser.GameObjects.Text;
+  private boardLimitText: Phaser.GameObjects.Text;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -31,8 +33,14 @@ export class HUD {
     this.livesText = scene.add.text(160, 8, '', { ...style, color: '#ff6666' });
     this.livesText.setScrollFactor(0).setDepth(1001);
 
-    this.waveText = scene.add.text(320, 8, '', style);
+    this.waveText = scene.add.text(300, 8, '', style);
     this.waveText.setScrollFactor(0).setDepth(1001);
+
+    this.levelText = scene.add.text(440, 8, '', { ...style, color: '#88ccff' });
+    this.levelText.setScrollFactor(0).setDepth(1001);
+
+    this.boardLimitText = scene.add.text(600, 8, '', { ...style, color: '#cccccc', fontSize: '13px' });
+    this.boardLimitText.setScrollFactor(0).setDepth(1001);
 
     this.phaseText = scene.add.text(scene.scale.width - 12, 8, '', { ...style, color: '#88ff88' });
     this.phaseText.setOrigin(1, 0).setScrollFactor(0).setDepth(1001);
@@ -53,5 +61,18 @@ export class HUD {
   updatePhase(phase: string): void {
     this.phaseText.setText(phase === 'shopping' ? 'SHOP PHASE' : 'COMBAT');
     this.phaseText.setColor(phase === 'shopping' ? '#88ff88' : '#ff8888');
+  }
+
+  updateLevel(level: number, xp: number, xpNeeded: number, maxBoard: number): void {
+    if (level >= MAX_LEVEL) {
+      this.levelText.setText(`Lv ${level} (MAX)`);
+    } else {
+      this.levelText.setText(`Lv ${level} (${xp}/${xpNeeded} XP)`);
+    }
+  }
+
+  updateBoardCount(placed: number, max: number): void {
+    this.boardLimitText.setText(`Board: ${placed}/${max}`);
+    this.boardLimitText.setColor(placed >= max ? '#ff6666' : '#cccccc');
   }
 }

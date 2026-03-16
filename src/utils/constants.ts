@@ -16,6 +16,49 @@ export const BASE_WAVE_GOLD = 5;
 export const BENCH_SIZE = 8;
 export const SHOP_SIZE = 5;
 
+// Player level system
+export const STARTING_LEVEL = 2;
+export const MAX_LEVEL = 9;
+export const BUY_XP_COST = 4;
+export const BUY_XP_AMOUNT = 4;
+
+// XP needed to reach each level (index = level, value = total XP needed)
+// Level 2 = start, so XP to go from level 2→3 is XP_PER_LEVEL[3], etc.
+export const XP_PER_LEVEL: Record<number, number> = {
+  3: 2,
+  4: 6,
+  5: 10,
+  6: 20,
+  7: 36,
+  8: 56,
+  9: 80,
+};
+
+// Max champions on the board per level
+export const BOARD_SIZE_PER_LEVEL: Record<number, number> = {
+  1: 1,
+  2: 2,
+  3: 3,
+  4: 4,
+  5: 5,
+  6: 6,
+  7: 7,
+  8: 8,
+  9: 9,
+};
+
+// Shop odds per level: probability of each cost tier [1-cost, 2-cost, 3-cost, 4-cost]
+export const SHOP_ODDS_PER_LEVEL: Record<number, number[]> = {
+  2: [1.00, 0.00, 0.00, 0.00],
+  3: [0.70, 0.30, 0.00, 0.00],
+  4: [0.50, 0.35, 0.15, 0.00],
+  5: [0.35, 0.35, 0.25, 0.05],
+  6: [0.25, 0.30, 0.30, 0.15],
+  7: [0.15, 0.25, 0.35, 0.25],
+  8: [0.10, 0.20, 0.35, 0.35],
+  9: [0.05, 0.15, 0.30, 0.50],
+};
+
 // Star upgrade multipliers
 export const STAR_2_MULTIPLIER = 1.8;
 export const STAR_3_MULTIPLIER = 3.2;

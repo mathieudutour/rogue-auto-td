@@ -109,19 +109,21 @@ export class GameScene extends Phaser.Scene {
     this.phase = 'shopping';
     this.waveNumber++;
 
-    // Award gold
+    // Award gold and XP
     if (this.waveNumber > 1) {
       const waveGold = BASE_WAVE_GOLD;
       const interest = this.economyManager.calculateInterest();
       this.economyManager.addGold(waveGold + interest);
+      this.economyManager.addXp(2); // passive XP per wave
     }
 
     // Roll shop
     this.shopManager.rollShop();
 
-    // Emit event for UI
+    // Emit events for UI
     this.events.emit('phaseChanged', this.phase);
     this.events.emit('waveChanged', this.waveNumber);
+    this.events.emit('levelChanged', this.economyManager.level, this.economyManager.xp, this.economyManager.getXpToNextLevel(), this.economyManager.getMaxBoardSize());
   }
 
   startCombatPhase(): void {
@@ -180,9 +182,19 @@ export class GameScene extends Phaser.Scene {
     this.enemies.push(enemy);
   }
 
+  getPlacedCount(): number {
+    return this.champions.filter(c => c.placed).length;
+  }
+
   placeChampion(champion: Champion, col: number, row: number): boolean {
     if (this.isoMap.getTileType(col, row) !== TileType.Placeable) return false;
     if (this.isoMap.isOccupied(col, row)) return false;
+
+    // Check board size limit (skip if champion is already placed — repositioning)
+    if (!champion.placed) {
+      const maxBoard = this.economyManager.getMaxBoardSize();
+      if (this.getPlacedCount() >= maxBoard) return false;
+    }
 
     const { x, y } = tileToScreen(col, row);
     champion.place(col, row, x, y);
@@ -254,6 +266,16 @@ export class GameScene extends Phaser.Scene {
   private gameOver(): void {
     this.phase = 'shopping'; // Stop combat
     this.events.emit('gameOver', this.waveNumber);
+  }
+
+  buyXp(): boolean {
+    const prevLevel = this.economyManager.level;
+    const success = this.economyManager.buyXp();
+    if (success) {
+      this.events.emit('goldChanged', this.economyManager.getGold());
+      this.events.emit('levelChanged', this.economyManager.level, this.economyManager.xp, this.economyManager.getXpToNextLevel(), this.economyManager.getMaxBoardSize());
+    }
+    return success;
   }
 
   getGold(): number {

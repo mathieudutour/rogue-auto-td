@@ -1,7 +1,7 @@
 import { GameScene } from '../scenes/GameScene';
 import { CHAMPIONS, ChampionData, getChampionById } from '../data/champions';
 import { Champion } from '../entities/Champion';
-import { POOL_SIZES, SHOP_SIZE, REROLL_COST, BENCH_SIZE } from '../utils/constants';
+import { POOL_SIZES, SHOP_SIZE, REROLL_COST, BENCH_SIZE, SHOP_ODDS_PER_LEVEL } from '../utils/constants';
 
 interface PoolEntry {
   championId: string;
@@ -47,14 +47,35 @@ export class ShopManager {
   }
 
   private rollOne(): ChampionData | null {
-    // Build weighted pool from available champions
-    const available = this.pool.filter(p => p.remaining > 0);
-    if (available.length === 0) return null;
+    // First, pick a cost tier based on level odds
+    const level = this.scene.economyManager.level;
+    const odds = SHOP_ODDS_PER_LEVEL[level] || SHOP_ODDS_PER_LEVEL[2];
+    const tierRoll = Math.random();
+    let costTier = 1;
+    let cumulative = 0;
+    for (let i = 0; i < odds.length; i++) {
+      cumulative += odds[i];
+      if (tierRoll <= cumulative) {
+        costTier = i + 1;
+        break;
+      }
+    }
 
-    const totalWeight = available.reduce((sum, p) => sum + p.remaining, 0);
+    // Filter pool to that cost tier with remaining copies
+    const available = this.pool.filter(p => {
+      if (p.remaining <= 0) return false;
+      const data = getChampionById(p.championId);
+      return data && data.cost === costTier;
+    });
+
+    // Fallback: if no champions of that tier, try any available
+    const fallbackPool = available.length > 0 ? available : this.pool.filter(p => p.remaining > 0);
+    if (fallbackPool.length === 0) return null;
+
+    const totalWeight = fallbackPool.reduce((sum, p) => sum + p.remaining, 0);
     let roll = Math.random() * totalWeight;
 
-    for (const entry of available) {
+    for (const entry of fallbackPool) {
       roll -= entry.remaining;
       if (roll <= 0) {
         const data = getChampionById(entry.championId);

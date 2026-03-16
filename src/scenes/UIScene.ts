@@ -54,7 +54,14 @@ export class UIScene extends Phaser.Scene {
     });
     gameScene.events.on('shopUpdated', (slots: any[]) => this.shopPanel.updateSlots(slots));
     gameScene.events.on('synergiesChanged', (synergies: any[]) => this.synergyBar.update(synergies));
-    gameScene.events.on('championsChanged', () => this.updateBenchUI(gameScene));
+    gameScene.events.on('championsChanged', () => {
+      this.updateBenchUI(gameScene);
+      this.hud.updateBoardCount(gameScene.getPlacedCount(), gameScene.economyManager.getMaxBoardSize());
+    });
+    gameScene.events.on('levelChanged', (level: number, xp: number, xpNeeded: number, maxBoard: number) => {
+      this.hud.updateLevel(level, xp, xpNeeded, maxBoard);
+      this.hud.updateBoardCount(gameScene.getPlacedCount(), maxBoard);
+    });
     gameScene.events.on('gameOver', (wave: number) => this.showGameOver(wave));
 
     // Initial UI state (pull current values since events may have fired before we listened)
@@ -66,6 +73,8 @@ export class UIScene extends Phaser.Scene {
       this.shopPanel.updateSlots(gameScene.shopManager.shopSlots);
     }
     this.updateBenchUI(gameScene);
+    this.hud.updateLevel(gameScene.economyManager.level, gameScene.economyManager.xp, gameScene.economyManager.getXpToNextLevel(), gameScene.economyManager.getMaxBoardSize());
+    this.hud.updateBoardCount(gameScene.getPlacedCount(), gameScene.economyManager.getMaxBoardSize());
 
     // Drag-and-drop input
     this.setupDragAndDrop(gameScene);
