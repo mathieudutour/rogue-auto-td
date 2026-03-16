@@ -176,7 +176,8 @@ export class UIScene extends Phaser.Scene {
   }
 
   private showSellBin(champion: Champion): void {
-    this.sellBinText.setText(`SELL for ${champion.cost}g`);
+    const sellPrice = champion.cost * Math.pow(3, champion.starLevel - 1);
+    this.sellBinText.setText(`SELL for ${sellPrice}g`);
     this.sellBin.setVisible(true);
   }
 

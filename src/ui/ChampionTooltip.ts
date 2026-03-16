@@ -174,7 +174,8 @@ export class ChampionTooltip {
     const isShopping = gameScene.phase === 'shopping';
     this.sellButton.setVisible(isShopping);
     const sellText = this.sellButton.getByName('sellText') as Phaser.GameObjects.Text;
-    sellText.setText(`SELL ${champion.cost}g`);
+    const sellPrice = champion.cost * Math.pow(3, champion.starLevel - 1);
+    sellText.setText(`SELL ${sellPrice}g`);
 
     // Resize panel based on content
     const neededH = bonuses.length > 0 ? 200 : (isShopping ? 170 : 140);
