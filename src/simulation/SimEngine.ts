@@ -7,7 +7,7 @@ import { CHAMPIONS, ChampionData, getChampionById } from '../data/champions';
 import { ENEMY_TYPES } from '../data/enemies';
 import { getWaveData } from '../data/waves';
 import { SYNERGIES } from '../data/synergies';
-import { MAP_1 } from '../data/maps';
+import { MapData, MAP_1 } from '../data/maps';
 import { tileToScreen } from '../utils/iso';
 import {
   STARTING_GOLD,
@@ -51,8 +51,8 @@ interface PlaceableTile {
   y: number;
 }
 
-function buildPathData(): PathData {
-  const points = MAP_1.pathWaypoints.map(wp => tileToScreen(wp.col, wp.row));
+function buildPathData(map: MapData): PathData {
+  const points = map.pathWaypoints.map(wp => tileToScreen(wp.col, wp.row));
   const segmentLengths: number[] = [];
   let totalLength = 0;
   for (let i = 0; i < points.length - 1; i++) {
@@ -84,11 +84,11 @@ function getPointAtDistance(path: PathData, dist: number): { x: number; y: numbe
 }
 
 /** Get all placeable tiles from the map */
-function getPlaceableTiles(): PlaceableTile[] {
+function getPlaceableTiles(map: MapData): PlaceableTile[] {
   const tiles: PlaceableTile[] = [];
-  for (let row = 0; row < MAP_1.grid.length; row++) {
-    for (let col = 0; col < MAP_1.grid[row].length; col++) {
-      if (MAP_1.grid[row][col] === 1) {
+  for (let row = 0; row < map.grid.length; row++) {
+    for (let col = 0; col < map.grid[row].length; col++) {
+      if (map.grid[row][col] === 1) {
         const { x, y } = tileToScreen(col, row);
         tiles.push({ col, row, x, y });
       }
@@ -97,16 +97,11 @@ function getPlaceableTiles(): PlaceableTile[] {
   return tiles;
 }
 
-// Pre-sort placeable tiles by proximity to path for smarter placement
-const PATH_DATA = buildPathData();
-const PLACEABLE_TILES = getPlaceableTiles();
-
 /** Score tiles by how close they are to the path (lower = closer = better) */
-function scoreTileByPathProximity(tile: PlaceableTile): number {
+function scoreTileByPathProximity(tile: PlaceableTile, pathData: PathData): number {
   let minDist = Infinity;
-  // Sample points along the path
-  for (let d = 0; d < PATH_DATA.totalLength; d += 20) {
-    const pt = getPointAtDistance(PATH_DATA, d);
+  for (let d = 0; d < pathData.totalLength; d += 20) {
+    const pt = getPointAtDistance(pathData, d);
     const dx = pt.x - tile.x;
     const dy = pt.y - tile.y;
     minDist = Math.min(minDist, Math.sqrt(dx * dx + dy * dy));
@@ -114,9 +109,10 @@ function scoreTileByPathProximity(tile: PlaceableTile): number {
   return minDist;
 }
 
-const TILES_BY_PATH_PROXIMITY = [...PLACEABLE_TILES].sort(
-  (a, b) => scoreTileByPathProximity(a) - scoreTileByPathProximity(b)
-);
+function buildSortedTiles(map: MapData, pathData: PathData): PlaceableTile[] {
+  const tiles = getPlaceableTiles(map);
+  return tiles.sort((a, b) => scoreTileByPathProximity(a, pathData) - scoreTileByPathProximity(b, pathData));
+}
 
 export interface ShopOffer {
   championData: ChampionData;
@@ -134,10 +130,12 @@ export interface SimResult {
 export class SimEngine {
   state: SimState;
   private path: PathData;
+  private tilesByProximity: PlaceableTile[];
   private occupiedTiles: Set<string> = new Set();
 
-  constructor() {
-    this.path = PATH_DATA;
+  constructor(map: MapData = MAP_1) {
+    this.path = buildPathData(map);
+    this.tilesByProximity = buildSortedTiles(map, this.path);
     this.state = {
       gold: STARTING_GOLD,
       lives: STARTING_LIVES,
@@ -395,7 +393,7 @@ export class SimEngine {
 
   /** Get available tiles sorted by path proximity, filtered to unoccupied */
   getAvailableTiles(): PlaceableTile[] {
-    return TILES_BY_PATH_PROXIMITY.filter(
+    return this.tilesByProximity.filter(
       t => !this.occupiedTiles.has(`${t.col},${t.row}`)
     );
   }

@@ -12,7 +12,26 @@ export enum TileType {
 interface TileState {
   type: TileType;
   occupied: boolean;
-  graphic: Phaser.GameObjects.Polygon;
+  image: Phaser.GameObjects.Image;
+}
+
+const TILE_VARIANTS = 4;
+
+/** Simple deterministic hash for variant picking */
+function tileVariant(col: number, row: number): number {
+  return Math.abs((col * 7 + row * 13 + col * row * 3) % TILE_VARIANTS);
+}
+
+function getTextureKey(type: TileType, variant: number): string {
+  switch (type) {
+    case TileType.Path:
+      return `tile_path_${variant}`;
+    case TileType.Placeable:
+      return `tile_placeable_${variant}`;
+    case TileType.Blocked:
+    default:
+      return `tile_blocked_${variant}`;
+  }
 }
 
 export class IsometricMap {
@@ -23,6 +42,11 @@ export class IsometricMap {
   private dragHighlightTile: { col: number; row: number } | null = null;
   private mapData: MapData;
   private container: Phaser.GameObjects.Container;
+
+  // Overlay images for hover / selection / drag
+  private hoverOverlay: Phaser.GameObjects.Image | null = null;
+  private selectedOverlay: Phaser.GameObjects.Image | null = null;
+  private dragOverlay: Phaser.GameObjects.Image | null = null;
 
   constructor(scene: Phaser.Scene, mapData: MapData) {
     this.scene = scene;
@@ -41,40 +65,19 @@ export class IsometricMap {
         const type = grid[row][col] as TileType;
         const { x, y } = tileToScreen(col, row);
 
-        // Diamond polygon points (relative to center)
-        const hw = TILE_WIDTH / 2;
-        const hh = TILE_HEIGHT / 2;
-        const points = [
-          { x: 0, y: -hh },   // top
-          { x: hw, y: 0 },    // right
-          { x: 0, y: hh },    // bottom
-          { x: -hw, y: 0 },   // left
-        ];
+        const variant = tileVariant(col, row);
+        const textureKey = getTextureKey(type, variant);
 
-        const { fill, stroke } = this.getTileColors(type);
-        const polygon = this.scene.add.polygon(x, y, points, fill, 0.9);
-        polygon.setStrokeStyle(1, stroke, 0.8);
-        polygon.setDepth(y);
-        this.container.add(polygon);
+        const image = this.scene.add.image(x, y, textureKey);
+        image.setDepth(y);
+        this.container.add(image);
 
         this.tiles[row][col] = {
           type,
           occupied: false,
-          graphic: polygon,
+          image,
         };
       }
-    }
-  }
-
-  private getTileColors(type: TileType): { fill: number; stroke: number } {
-    switch (type) {
-      case TileType.Path:
-        return { fill: COLORS.path, stroke: COLORS.pathStroke };
-      case TileType.Placeable:
-        return { fill: COLORS.placeable, stroke: COLORS.placeableStroke };
-      case TileType.Blocked:
-      default:
-        return { fill: COLORS.blocked, stroke: COLORS.blockedStroke };
     }
   }
 
@@ -84,14 +87,14 @@ export class IsometricMap {
       const { col, row } = screenToTileRounded(worldPoint.x, worldPoint.y);
 
       // Clear previous hover
-      if (this.hoverTile) {
-        this.resetTileVisual(this.hoverTile.col, this.hoverTile.row);
-      }
+      this.clearHoverOverlay();
 
       if (this.isValidTile(col, row) && this.tiles[row][col].type !== TileType.Blocked) {
         this.hoverTile = { col, row };
-        const tile = this.tiles[row][col];
-        tile.graphic.setStrokeStyle(2, COLORS.hover, 1);
+        const { x, y } = tileToScreen(col, row);
+        this.hoverOverlay = this.scene.add.image(x, y, 'tile_hover');
+        this.hoverOverlay.setDepth(y + 0.1);
+        this.container.add(this.hoverOverlay);
       } else {
         this.hoverTile = null;
       }
@@ -103,30 +106,38 @@ export class IsometricMap {
       const { col, row } = screenToTileRounded(worldPoint.x, worldPoint.y);
 
       // Clear previous selection
-      if (this.selectedTile) {
-        this.resetTileVisual(this.selectedTile.col, this.selectedTile.row);
-      }
+      this.clearSelectedOverlay();
 
       if (this.isValidTile(col, row) && this.tiles[row][col].type === TileType.Placeable) {
         this.selectedTile = { col, row };
-        const tile = this.tiles[row][col];
-        tile.graphic.setStrokeStyle(2, COLORS.selected, 1);
+        const { x, y } = tileToScreen(col, row);
+        this.selectedOverlay = this.scene.add.image(x, y, 'tile_selected');
+        this.selectedOverlay.setDepth(y + 0.1);
+        this.container.add(this.selectedOverlay);
       } else {
         this.selectedTile = null;
       }
     });
   }
 
-  private resetTileVisual(col: number, row: number): void {
-    if (!this.isValidTile(col, row)) return;
-    const tile = this.tiles[row][col];
-    const { stroke } = this.getTileColors(tile.type);
+  private clearHoverOverlay(): void {
+    if (this.hoverOverlay) {
+      this.hoverOverlay.destroy();
+      this.hoverOverlay = null;
+    }
+  }
 
-    // Keep selected highlight if this is the selected tile
-    if (this.selectedTile && this.selectedTile.col === col && this.selectedTile.row === row) {
-      tile.graphic.setStrokeStyle(2, COLORS.selected, 1);
-    } else {
-      tile.graphic.setStrokeStyle(1, stroke, 0.8);
+  private clearSelectedOverlay(): void {
+    if (this.selectedOverlay) {
+      this.selectedOverlay.destroy();
+      this.selectedOverlay = null;
+    }
+  }
+
+  private clearDragOverlayImage(): void {
+    if (this.dragOverlay) {
+      this.dragOverlay.destroy();
+      this.dragOverlay = null;
     }
   }
 
@@ -155,10 +166,8 @@ export class IsometricMap {
   }
 
   clearSelection(): void {
-    if (this.selectedTile) {
-      this.resetTileVisual(this.selectedTile.col, this.selectedTile.row);
-      this.selectedTile = null;
-    }
+    this.clearSelectedOverlay();
+    this.selectedTile = null;
   }
 
   getContainer(): Phaser.GameObjects.Container {
@@ -167,30 +176,22 @@ export class IsometricMap {
 
   /** Highlight a tile during drag-and-drop. Green if valid, red if invalid. */
   setDragHighlight(col: number, row: number, isValid: boolean): void {
-    // Clear previous drag highlight
     this.clearDragHighlight();
 
     if (!this.isValidTile(col, row)) return;
     if (this.tiles[row][col].type === TileType.Blocked) return;
 
     this.dragHighlightTile = { col, row };
-    const tile = this.tiles[row][col];
-    const color = isValid ? 0x00ff00 : 0xff0000;
-    tile.graphic.setStrokeStyle(3, color, 1);
-    tile.graphic.setFillStyle(isValid ? 0x225522 : 0x552222, 0.9);
+    const { x, y } = tileToScreen(col, row);
+    const textureKey = isValid ? 'tile_drag_valid' : 'tile_drag_invalid';
+    this.dragOverlay = this.scene.add.image(x, y, textureKey);
+    this.dragOverlay.setDepth(y + 0.2);
+    this.container.add(this.dragOverlay);
   }
 
-  /** Remove the drag highlight and restore the tile's original appearance. */
+  /** Remove the drag highlight. */
   clearDragHighlight(): void {
-    if (this.dragHighlightTile) {
-      const { col, row } = this.dragHighlightTile;
-      if (this.isValidTile(col, row)) {
-        const tile = this.tiles[row][col];
-        const { fill, stroke } = this.getTileColors(tile.type);
-        tile.graphic.setFillStyle(fill, 0.9);
-        tile.graphic.setStrokeStyle(1, stroke, 0.8);
-      }
-      this.dragHighlightTile = null;
-    }
+    this.clearDragOverlayImage();
+    this.dragHighlightTile = null;
   }
 }

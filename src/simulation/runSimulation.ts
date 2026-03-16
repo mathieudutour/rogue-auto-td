@@ -8,12 +8,14 @@
 import { SimEngine, SimResult } from './SimEngine';
 import { SmartAI, GreedyAI, EconAI } from './AIStrategy';
 import type { AIStrategy } from './SimEngine';
+import { generateMap } from '../map/MapGenerator';
 
 function runBatch(strategyName: string, createStrategy: () => AIStrategy, numGames: number): void {
   const results: SimResult[] = [];
 
   for (let i = 0; i < numGames; i++) {
-    const engine = new SimEngine();
+    const map = generateMap();
+    const engine = new SimEngine(map);
     const strategy = createStrategy();
     results.push(engine.runGame(strategy));
   }

@@ -42,3 +42,5 @@ export const MAP_1: MapData = {
 };
 
 export const ALL_MAPS: MapData[] = [MAP_1];
+
+export { generateMap } from '../map/MapGenerator';

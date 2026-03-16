@@ -217,12 +217,31 @@ export class UIScene extends Phaser.Scene {
     // We listen on this (UIScene) for all pointer events since it's the top scene
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (pointer.button !== 0) return;
-      if (gameScene.phase !== 'shopping') return;
 
       // Find which champion was clicked (bench or board)
       let champion: Champion | null = null;
       let benchIndex = -1;
       let fromBoard = false;
+
+      // During combat, only allow clicking board champions (no bench, no drag)
+      if (gameScene.phase === 'combat') {
+        const worldPoint = gameScene.cameras.main.getWorldPoint(pointer.x, pointer.y);
+        const { col, row } = screenToTileRounded(worldPoint.x, worldPoint.y);
+        const champOnTile = gameScene.champions.find(
+          c => c.placed && c.gridCol === col && c.gridRow === row
+        );
+        if (champOnTile) {
+          // Show tooltip only (no drag setup)
+          if (this.tooltip.isVisible() && this.tooltip.getChampion() === champOnTile) {
+            this.tooltip.hide();
+          } else {
+            this.tooltip.show(champOnTile, pointer.x, pointer.y);
+          }
+        } else {
+          this.tooltip.hide();
+        }
+        return;
+      }
 
       const benchIdx = this.getBenchSlotAt(pointer.x, pointer.y);
       if (benchIdx >= 0) {

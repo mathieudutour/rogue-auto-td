@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { IsometricMap, TileType } from '../map/IsometricMap';
 import { PathGraph } from '../map/PathGraph';
-import { MAP_1 } from '../data/maps';
+import { MapData, generateMap } from '../data/maps';
 import { getMapCenter, tileToScreen } from '../utils/iso';
 import { STARTING_LIVES, STARTING_GOLD, COLORS } from '../utils/constants';
 import { WaveManager } from '../systems/WaveManager';
@@ -43,10 +43,15 @@ export class GameScene extends Phaser.Scene {
     super({ key: 'GameScene' });
   }
 
+  mapData!: MapData;
+
   create(): void {
+    // Generate a random map each game
+    this.mapData = generateMap();
+
     // Build map
-    this.isoMap = new IsometricMap(this, MAP_1);
-    this.pathGraph = new PathGraph(MAP_1.pathWaypoints);
+    this.isoMap = new IsometricMap(this, this.mapData);
+    this.pathGraph = new PathGraph(this.mapData.pathWaypoints);
 
     // Initialize systems
     this.economyManager = new EconomyManager(STARTING_GOLD);

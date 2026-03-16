@@ -169,12 +169,15 @@ export class ChampionTooltip {
       this.bonusStatsText.setVisible(false);
     }
 
-    // Sell button text with gold value
+    // Sell button text with gold value — hide during combat
+    const gameScene = this.scene.scene.get('GameScene') as GameScene;
+    const isShopping = gameScene.phase === 'shopping';
+    this.sellButton.setVisible(isShopping);
     const sellText = this.sellButton.getByName('sellText') as Phaser.GameObjects.Text;
     sellText.setText(`SELL ${champion.cost}g`);
 
     // Resize panel based on content
-    const neededH = bonuses.length > 0 ? 200 : 170;
+    const neededH = bonuses.length > 0 ? 200 : (isShopping ? 170 : 140);
     this.bg.setSize(PANEL_W, neededH);
     this.border.setSize(PANEL_W, neededH);
     this.sellButton.setPosition(PANEL_W - 80, neededH - 34);
