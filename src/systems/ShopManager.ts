@@ -98,10 +98,15 @@ export class ShopManager {
     // Check gold
     if (!this.scene.economyManager.canAfford(data.cost)) return null;
 
-    // Check bench space
+    // Check bench space — skip if buying would trigger a merge (frees slots)
     const benchSpace = this.scene.bench.filter(b => b === null).length;
     const totalBench = this.scene.bench.length;
-    if (benchSpace === 0 && totalBench >= BENCH_SIZE) return null;
+    if (benchSpace === 0 && totalBench >= BENCH_SIZE) {
+      const copies = this.getAllChampionsOfId(data.id, 1);
+      const twoStarCopies = this.getAllChampionsOfId(data.id, 2);
+      const wouldMerge = copies.length >= 2 || twoStarCopies.length >= 2;
+      if (!wouldMerge) return null;
+    }
 
     // Spend gold
     this.scene.economyManager.spendGold(data.cost);

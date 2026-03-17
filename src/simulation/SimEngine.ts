@@ -246,9 +246,14 @@ export class SimEngine {
     const data = offer.championData;
     if (!this.canAfford(data.cost)) return null;
 
-    // Check bench space
+    // Check bench space — skip if buying would trigger a merge (frees slots)
     const benchSpace = this.state.bench.filter(b => b === null).length;
-    if (benchSpace === 0 && this.state.bench.length >= BENCH_SIZE) return null;
+    if (benchSpace === 0 && this.state.bench.length >= BENCH_SIZE) {
+      const copies = this.getAllChampionsOfId(data.id, 1);
+      const twoStarCopies = this.getAllChampionsOfId(data.id, 2);
+      const wouldMerge = copies.length >= 2 || twoStarCopies.length >= 2;
+      if (!wouldMerge) return null;
+    }
 
     this.spendGold(data.cost);
 
