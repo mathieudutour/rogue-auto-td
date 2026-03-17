@@ -120,7 +120,8 @@ export class ChampionTooltip {
     bg.on('pointerdown', () => {
       if (!this.champion) return;
       const gameScene = this.scene.scene.get('GameScene') as GameScene;
-      if (gameScene.phase !== 'shopping') return;
+      // During combat, only allow selling bench champions (not placed ones fighting)
+      if (gameScene.phase === 'combat' && this.champion.placed) return;
       gameScene.sellChampion(this.champion);
       this.hide();
     });
@@ -201,14 +202,16 @@ export class ChampionTooltip {
     // Sell button text with gold value — hide during combat
     const gameScene = this.scene.scene.get('GameScene') as GameScene;
     const isShopping = gameScene.phase === 'shopping';
-    this.sellButton.setVisible(isShopping);
+    // Show sell button during shopping, or during combat for bench-only champions
+    const canSell = isShopping || !champion.placed;
+    this.sellButton.setVisible(canSell);
     const sellText = this.sellButton.getByName('sellText') as Phaser.GameObjects.Text;
     sellText.setText(`SELL ${champion.getSellPrice()}g`);
 
     // Resize panel based on content
     let neededH = bonuses.length > 0 ? 155 : 130;
     neededH += itemsHeight;
-    if (isShopping) neededH += 36;
+    if (canSell) neededH += 36;
     this.bg.setSize(PANEL_W, neededH);
     this.border.setSize(PANEL_W, neededH);
     this.sellButton.setPosition(PANEL_W - 80, neededH - 34);

@@ -61,7 +61,7 @@ export class UIScene extends Phaser.Scene {
     gameScene.events.on('waveChanged', (wave: number) => this.hud.updateWave(wave));
     gameScene.events.on('phaseChanged', (phase: string) => {
       this.hud.updatePhase(phase);
-      this.shopPanel.setVisible(phase === 'shopping');
+      // Shop stays visible during combat — players can buy/reroll/sell bench champs
     });
     gameScene.events.on('incomeBreakdown', (income: { base: number; interest: number; streak: number; total: number }) => {
       this.hud.updateGold(gameScene.economyManager.getGold());
@@ -228,36 +228,30 @@ export class UIScene extends Phaser.Scene {
       let champion: Champion | null = null;
       let benchIndex = -1;
       let fromBoard = false;
+      const isCombat = gameScene.phase === 'combat';
 
-      if (gameScene.phase === 'combat') {
-        const worldPoint = gameScene.cameras.main.getWorldPoint(pointer.x, pointer.y);
-        const { col, row } = screenToTileRounded(worldPoint.x, worldPoint.y);
-        const champOnTile = gameScene.champions.find(
-          c => c.placed && c.gridCol === col && c.gridRow === row
-        );
-        if (champOnTile) {
-          if (this.tooltip.isVisible() && this.tooltip.getChampion() === champOnTile) {
-            this.tooltip.hide();
-          } else {
-            this.tooltip.show(champOnTile, pointer.x, pointer.y);
-          }
-        } else {
-          this.tooltip.hide();
-        }
-        return;
-      }
-
+      // Check bench first
       const benchIdx = this.getBenchSlotAt(pointer.x, pointer.y);
       if (benchIdx >= 0) {
         champion = gameScene.bench[benchIdx] ?? null;
         benchIndex = benchIdx;
       } else {
+        // Check board
         const worldPoint = gameScene.cameras.main.getWorldPoint(pointer.x, pointer.y);
         const { col, row } = screenToTileRounded(worldPoint.x, worldPoint.y);
         const champOnTile = gameScene.champions.find(
           c => c.placed && c.gridCol === col && c.gridRow === row
         );
         if (champOnTile) {
+          if (isCombat) {
+            // During combat, board champions can only be inspected (tooltip), not dragged
+            if (this.tooltip.isVisible() && this.tooltip.getChampion() === champOnTile) {
+              this.tooltip.hide();
+            } else {
+              this.tooltip.show(champOnTile, pointer.x, pointer.y);
+            }
+            return;
+          }
           champion = champOnTile;
           fromBoard = true;
         }
@@ -324,8 +318,15 @@ export class UIScene extends Phaser.Scene {
       gameScene.isoMap.clearDragHighlight();
       this.hideSellBin();
 
+      const isCombat = gameScene.phase === 'combat';
+
       if (this.isOverSellBin(pointer.x, pointer.y)) {
-        this.dropOnSellBin(gameScene);
+        // During combat, only allow selling bench champions via drag
+        if (isCombat && this.dragFromBoard) {
+          this.cancelDrag(gameScene);
+        } else {
+          this.dropOnSellBin(gameScene);
+        }
         this.endDrag();
         return;
       }
@@ -334,6 +335,9 @@ export class UIScene extends Phaser.Scene {
 
       if (benchIndex >= 0) {
         this.dropOnBench(gameScene, benchIndex);
+      } else if (isCombat) {
+        // During combat, can't place champions on the board
+        this.cancelDrag(gameScene);
       } else {
         const worldPoint = gameScene.cameras.main.getWorldPoint(pointer.x, pointer.y);
         const { col, row } = screenToTileRounded(worldPoint.x, worldPoint.y);
@@ -472,8 +476,8 @@ export class UIScene extends Phaser.Scene {
   private setupSellInput(gameScene: GameScene): void {
     gameScene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (pointer.button !== 2) return;
-      if (gameScene.phase !== 'shopping') return;
 
+      // Right-click on board champion to sell (only during shopping)
       const worldPoint = gameScene.cameras.main.getWorldPoint(pointer.x, pointer.y);
       const { col, row } = screenToTileRounded(worldPoint.x, worldPoint.y);
 
@@ -481,6 +485,8 @@ export class UIScene extends Phaser.Scene {
         c => c.placed && c.gridCol === col && c.gridRow === row
       );
       if (champOnTile) {
+        // Can't sell placed champions during combat
+        if (gameScene.phase === 'combat') return;
         gameScene.sellChampion(champOnTile);
       }
     });

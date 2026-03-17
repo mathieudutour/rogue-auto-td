@@ -257,7 +257,6 @@ export class ShopPanel {
     card.setInteractive({ useHandCursor: true });
     card.on('pointerdown', () => {
       const gameScene = this.scene.scene.get('GameScene') as GameScene;
-      if (gameScene.phase !== 'shopping') return;
       gameScene.shopManager.buyChampion(index);
     });
     card.on('pointerover', () => {
@@ -358,14 +357,12 @@ export class ShopPanel {
     // Buy XP click
     const buyXpBg = this.buyXpButton.list[0] as Phaser.GameObjects.Rectangle;
     buyXpBg.on('pointerdown', () => {
-      if (gameScene.phase !== 'shopping') return;
       gameScene.buyXp();
     });
 
     // Reroll click
     const rerollBg = this.rerollButton.list[0] as Phaser.GameObjects.Rectangle;
     rerollBg.on('pointerdown', () => {
-      if (gameScene.phase !== 'shopping') return;
       gameScene.shopManager.reroll();
     });
 

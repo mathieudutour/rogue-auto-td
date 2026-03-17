@@ -76,8 +76,6 @@ export class ItemPanel {
   setupEvents(gameScene: GameScene): void {
     this.scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (pointer.button !== 0) return;
-      if (gameScene.phase !== 'shopping') return;
-
       const slotIdx = this.getSlotAt(pointer.x, pointer.y);
       if (slotIdx >= 0 && slotIdx < gameScene.itemInventory.length) {
         this.dragIndex = slotIdx;
