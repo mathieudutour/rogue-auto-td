@@ -323,11 +323,12 @@ export class UIScene extends Phaser.Scene {
       }
 
       gameScene.isoMap.clearDragHighlight();
-      this.hideSellBin();
 
       const isCombat = gameScene.phase === 'combat';
+      const overSellBin = this.isOverSellBin(pointer.x, pointer.y);
+      this.hideSellBin();
 
-      if (this.isOverSellBin(pointer.x, pointer.y)) {
+      if (overSellBin) {
         // During combat, only allow selling bench champions via drag
         if (isCombat && this.dragFromBoard) {
           this.cancelDrag(gameScene);
