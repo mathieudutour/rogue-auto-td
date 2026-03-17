@@ -70,7 +70,7 @@ export const POOL_SIZES: Record<number, number> = {
   2: 20,
   3: 15,
   4: 10,
-  5: 5,
+  5: 10,
 };
 
 // Colors
