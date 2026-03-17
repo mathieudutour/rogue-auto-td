@@ -12,14 +12,21 @@ export interface WaveData {
 /** Generate wave data for a given wave number */
 export function getWaveData(waveNumber: number): WaveData {
   // Scaling: gentle linear early, compounding in late game
-  // Waves 1-20: +5% per wave (smooth ramp)
-  // Waves 21+: exponential growth that makes late game increasingly hard
+  // Waves 1-10: +10% per wave (smooth ramp)
+  // Waves 11-20: 15% compound per wave (mid-game pressure)
+  // Waves 21+: 25% compound per wave (games should end wave 25-40)
   let healthMultiplier: number;
-  if (waveNumber <= 20) {
-    healthMultiplier = 1 + (waveNumber - 1) * 0.05;
+  if (waveNumber <= 10) {
+    healthMultiplier = 1 + (waveNumber - 1) * 0.10;
+  } else if (waveNumber <= 20) {
+    // Base from wave 10 (1.9x), then 15% compound per wave
+    healthMultiplier = 1.9 * Math.pow(1.15, waveNumber - 10);
+  } else if (waveNumber <= 30) {
+    // Base from wave 20 (7.69x), then 25% compound per wave
+    healthMultiplier = 7.69 * Math.pow(1.25, waveNumber - 20);
   } else {
-    // Base from wave 20 (1.95x), then exponential
-    healthMultiplier = 1.95 * Math.pow(1.08, waveNumber - 20);
+    // Base from wave 30 (71.6x), then 45% compound per wave — endgame wall
+    healthMultiplier = 71.6 * Math.pow(1.45, waveNumber - 30);
   }
 
   if (waveNumber <= 3) {
@@ -58,13 +65,13 @@ export function getWaveData(waveNumber: number): WaveData {
   // Wave 10+: boss every 5 waves, growing composition
   const isBossWave = waveNumber % 5 === 0;
   const entries: WaveEntry[] = [
-    { enemyType: 'basic', count: 4 + Math.floor(waveNumber * 0.8), delayBetween: 800 },
-    { enemyType: 'fast', count: 2 + Math.floor(waveNumber * 0.7), delayBetween: 600 },
-    { enemyType: 'tank', count: 1 + Math.floor(waveNumber / 4), delayBetween: 1200 },
+    { enemyType: 'basic', count: 5 + Math.floor(waveNumber * 1.0), delayBetween: 700 },
+    { enemyType: 'fast', count: 3 + Math.floor(waveNumber * 0.8), delayBetween: 500 },
+    { enemyType: 'tank', count: 1 + Math.floor(waveNumber / 3), delayBetween: 1000 },
   ];
 
   if (isBossWave) {
-    entries.push({ enemyType: 'boss', count: Math.floor(waveNumber / 10), delayBetween: 2000 });
+    entries.push({ enemyType: 'boss', count: 1 + Math.floor(waveNumber / 8), delayBetween: 1800 });
   }
 
   return { entries, healthMultiplier };

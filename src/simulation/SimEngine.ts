@@ -566,7 +566,7 @@ export class SimEngine {
     let allSpawned = false;
     const dt = SIM_TIMESTEP / 1000; // seconds
 
-    for (let tick = 0; tick < 20000; tick++) { // safety: max ~1000 seconds of game time
+    for (let tick = 0; tick < 2000; tick++) { // safety: max ~100 seconds of game time
       // Spawn enemies
       if (!allSpawned) {
         let anyRemaining = false;
@@ -1104,7 +1104,7 @@ export class SimEngine {
       if (this.state.lives <= 0) break;
 
       // Safety: don't run forever
-      if (this.state.waveNumber >= 100) break;
+      if (this.state.waveNumber >= 40) break;
     }
 
     return {
