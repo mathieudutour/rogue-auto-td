@@ -77,6 +77,7 @@ export class UIScene extends Phaser.Scene {
     gameScene.events.on('levelChanged', (level: number, xp: number, xpNeeded: number, maxBoard: number) => {
       this.hud.updateLevel(level, xp, xpNeeded, maxBoard);
       this.hud.updateBoardCount(gameScene.getPlacedCount(), maxBoard);
+      this.shopPanel.updateLevel(level);
     });
     gameScene.events.on('gameOver', (wave: number) => this.showGameOver(wave));
     gameScene.events.on('itemInventoryChanged', (items: any[]) => this.itemPanel.update(items));
@@ -92,6 +93,7 @@ export class UIScene extends Phaser.Scene {
     this.updateBenchUI(gameScene);
     this.hud.updateLevel(gameScene.economyManager.level, gameScene.economyManager.xp, gameScene.economyManager.getXpToNextLevel(), gameScene.economyManager.getMaxBoardSize());
     this.hud.updateBoardCount(gameScene.getPlacedCount(), gameScene.economyManager.getMaxBoardSize());
+    this.shopPanel.updateLevel(gameScene.economyManager.level);
     this.itemPanel.update(gameScene.itemInventory);
 
     // Drag-and-drop input

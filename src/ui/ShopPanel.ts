@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS, REROLL_COST, BUY_XP_COST, TRAIT_COLORS } from '../utils/constants';
+import { COLORS, REROLL_COST, BUY_XP_COST, TRAIT_COLORS, MAX_LEVEL } from '../utils/constants';
 import { ShopSlot } from '../systems/ShopManager';
 import { GameScene } from '../scenes/GameScene';
 import { getLayout, LayoutMetrics } from '../utils/responsive';
@@ -458,5 +458,9 @@ export class ShopPanel {
 
   isVisible(): boolean {
     return this.visible;
+  }
+
+  updateLevel(level: number): void {
+    this.buyXpButton.setVisible(level < MAX_LEVEL);
   }
 }
