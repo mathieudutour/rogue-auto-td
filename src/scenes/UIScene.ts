@@ -405,14 +405,15 @@ export class UIScene extends Phaser.Scene {
         gameScene.isoMap.setOccupied(champion.gridCol, champion.gridRow, false);
       }
       champion.removeFromBoard();
+      gameScene.placeChampion(champion, col, row);
     } else {
-      const benchIdx = gameScene.bench.indexOf(champion);
-      if (benchIdx !== -1) {
-        gameScene.bench[benchIdx] = null;
+      // Try placing from bench — only remove from bench if placement succeeds
+      if (!gameScene.placeChampion(champion, col, row)) {
+        // Board is full, cancel the drag and return champion to bench
+        this.cancelDrag(gameScene);
+        return;
       }
     }
-
-    gameScene.placeChampion(champion, col, row);
   }
 
   /** Swap dragged champion with the champion occupying the target tile. */
