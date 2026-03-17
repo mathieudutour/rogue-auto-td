@@ -12,6 +12,7 @@ import { EconomyManager } from '../systems/EconomyManager';
 import { Enemy } from '../entities/Enemy';
 import { Champion } from '../entities/Champion';
 import { HeldItem, COMPONENTS } from '../data/items';
+import { getLayout } from '../utils/responsive';
 
 export type GamePhase = 'shopping' | 'combat';
 
@@ -81,7 +82,8 @@ export class GameScene extends Phaser.Scene {
 
   private setupCamera(): void {
     const cam = this.cameras.main;
-    cam.setZoom(1.5);
+    const layout = getLayout(this.scale.width, this.scale.height);
+    cam.setZoom(layout.defaultZoom);
 
     let dragStartX = 0;
     let dragStartY = 0;

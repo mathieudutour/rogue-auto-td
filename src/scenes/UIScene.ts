@@ -9,6 +9,7 @@ import { BENCH_SIZE, COLORS } from '../utils/constants';
 import { tileToScreen, screenToTileRounded } from '../utils/iso';
 import { TileType } from '../map/IsometricMap';
 import { Champion } from '../entities/Champion';
+import { getLayout, LayoutMetrics } from '../utils/responsive';
 
 export class UIScene extends Phaser.Scene {
   private hud!: HUD;
@@ -18,6 +19,7 @@ export class UIScene extends Phaser.Scene {
   private itemPanel!: ItemPanel;
   private benchSlots: Phaser.GameObjects.Container[] = [];
   private gameOverOverlay: Phaser.GameObjects.Container | null = null;
+  private layout!: LayoutMetrics;
 
   // Drag state
   private dragSprite: Phaser.GameObjects.Sprite | null = null;
@@ -34,17 +36,12 @@ export class UIScene extends Phaser.Scene {
   private sellBinBg!: Phaser.GameObjects.Rectangle;
   private sellBinText!: Phaser.GameObjects.Text;
 
-  // Bench layout constants
-  private benchY: number = 0;
-  private benchStartX: number = 0;
-  private slotSize: number = 34;
-  private slotGap: number = 4;
-
   constructor() {
     super({ key: 'UIScene' });
   }
 
   create(): void {
+    this.layout = getLayout(this.scale.width, this.scale.height);
     const gameScene = this.scene.get('GameScene') as GameScene;
 
     this.hud = new HUD(this);
@@ -84,7 +81,7 @@ export class UIScene extends Phaser.Scene {
     gameScene.events.on('gameOver', (wave: number) => this.showGameOver(wave));
     gameScene.events.on('itemInventoryChanged', (items: any[]) => this.itemPanel.update(items));
 
-    // Initial UI state (pull current values since events may have fired before we listened)
+    // Initial UI state
     this.hud.updateGold(gameScene.getGold());
     this.hud.updateLives(gameScene.lives);
     this.hud.updateWave(gameScene.waveNumber);
@@ -105,16 +102,13 @@ export class UIScene extends Phaser.Scene {
   }
 
   private createBenchUI(): void {
-    const w = this.scale.width;
-    this.benchY = this.scale.height - 148;
-    this.slotSize = 36;
-    this.slotGap = 5;
-    const totalWidth = BENCH_SIZE * (this.slotSize + this.slotGap) - this.slotGap;
-    this.benchStartX = (w - totalWidth) / 2;
+    const m = this.layout;
+    const totalWidth = BENCH_SIZE * (m.benchSlotSize + m.benchSlotGap) - m.benchSlotGap;
+    const benchStartX = (m.width - totalWidth) / 2;
 
     // Bench label
-    const label = this.add.text(this.benchStartX - 2, this.benchY - 14, 'BENCH', {
-      fontSize: '9px',
+    const label = this.add.text(benchStartX - 2, m.benchY - (m.isMobile ? 10 : 14), 'BENCH', {
+      fontSize: `${m.isMobile ? 7 : 9}px`,
       color: '#556677',
       fontFamily: 'monospace',
       fontStyle: 'bold',
@@ -122,26 +116,23 @@ export class UIScene extends Phaser.Scene {
     label.setScrollFactor(0).setDepth(1000);
 
     for (let i = 0; i < BENCH_SIZE; i++) {
-      const x = this.benchStartX + i * (this.slotSize + this.slotGap);
-      const container = this.add.container(x, this.benchY);
+      const x = benchStartX + i * (m.benchSlotSize + m.benchSlotGap);
+      const container = this.add.container(x, m.benchY);
       container.setScrollFactor(0);
       container.setDepth(1000);
 
-      // Slot background with rounded-look border
-      const bg = this.add.rectangle(0, 0, this.slotSize, this.slotSize, 0x12162a, 0.85);
+      const bg = this.add.rectangle(0, 0, m.benchSlotSize, m.benchSlotSize, 0x12162a, 0.85);
       bg.setOrigin(0, 0);
       bg.setStrokeStyle(1, 0x334466, 0.6);
       container.add(bg);
 
-      // Champion icon
-      const icon = this.add.sprite(this.slotSize / 2, this.slotSize / 2, 'champion_default');
+      const icon = this.add.sprite(m.benchSlotSize / 2, m.benchSlotSize / 2, 'champion_default');
       icon.setVisible(false);
       icon.setName('icon');
       container.add(icon);
 
-      // Star text
-      const starText = this.add.text(this.slotSize / 2, 2, '', {
-        fontSize: '8px',
+      const starText = this.add.text(m.benchSlotSize / 2, 2, '', {
+        fontSize: `${m.isMobile ? 7 : 8}px`,
         color: '#ffd700',
         fontFamily: 'monospace',
         fontStyle: 'bold',
@@ -155,12 +146,11 @@ export class UIScene extends Phaser.Scene {
   }
 
   private createSellBin(): void {
-    const w = this.scale.width;
-    const h = this.scale.height;
-    const binW = 180;
-    const binH = 50;
+    const m = this.layout;
+    const binW = m.isMobile ? 120 : 180;
+    const binH = m.isMobile ? 36 : 50;
 
-    this.sellBin = this.add.container(w / 2 - binW / 2, h - binH - 20);
+    this.sellBin = this.add.container(m.width / 2 - binW / 2, m.height - binH - (m.isMobile ? 10 : 20));
     this.sellBin.setScrollFactor(0);
     this.sellBin.setDepth(1500);
     this.sellBin.setVisible(false);
@@ -171,7 +161,7 @@ export class UIScene extends Phaser.Scene {
     this.sellBin.add(this.sellBinBg);
 
     this.sellBinText = this.add.text(binW / 2, binH / 2, 'SELL', {
-      fontSize: '16px',
+      fontSize: `${m.isMobile ? 12 : 16}px`,
       fontFamily: 'monospace',
       fontStyle: 'bold',
       color: '#ff6666',
@@ -195,8 +185,9 @@ export class UIScene extends Phaser.Scene {
     if (!this.sellBin.visible) return false;
     const binX = this.sellBin.x;
     const binY = this.sellBin.y;
-    const binW = 200;
-    const binH = 60;
+    const m = this.layout;
+    const binW = (m.isMobile ? 120 : 180) + 20;
+    const binH = (m.isMobile ? 36 : 50) + 10;
     return x >= binX && x <= binX + binW && y >= binY && y <= binY + binH;
   }
 
@@ -231,16 +222,13 @@ export class UIScene extends Phaser.Scene {
   }
 
   private setupDragAndDrop(gameScene: GameScene): void {
-    // We listen on this (UIScene) for all pointer events since it's the top scene
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (pointer.button !== 0) return;
 
-      // Find which champion was clicked (bench or board)
       let champion: Champion | null = null;
       let benchIndex = -1;
       let fromBoard = false;
 
-      // During combat, only allow clicking board champions (no bench, no drag)
       if (gameScene.phase === 'combat') {
         const worldPoint = gameScene.cameras.main.getWorldPoint(pointer.x, pointer.y);
         const { col, row } = screenToTileRounded(worldPoint.x, worldPoint.y);
@@ -248,7 +236,6 @@ export class UIScene extends Phaser.Scene {
           c => c.placed && c.gridCol === col && c.gridRow === row
         );
         if (champOnTile) {
-          // Show tooltip only (no drag setup)
           if (this.tooltip.isVisible() && this.tooltip.getChampion() === champOnTile) {
             this.tooltip.hide();
           } else {
@@ -277,7 +264,6 @@ export class UIScene extends Phaser.Scene {
       }
 
       if (champion && !this.itemPanel.isDragActive() && !this.itemPanel.isPointerOverItem(pointer.x, pointer.y, gameScene.itemInventory.length)) {
-        // Prepare for potential drag (don't start yet — wait for movement)
         this.dragChampion = champion;
         this.dragFromBenchIndex = benchIndex;
         this.dragFromBoard = fromBoard;
@@ -285,7 +271,6 @@ export class UIScene extends Phaser.Scene {
         this.dragStartY = pointer.y;
         this.isDragging = false;
       } else {
-        // Clicked empty space — hide tooltip
         this.tooltip.hide();
       }
     });
@@ -297,7 +282,6 @@ export class UIScene extends Phaser.Scene {
       const dy = pointer.y - this.dragStartY;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
-      // Start drag only after threshold
       if (!this.isDragging && dist >= UIScene.DRAG_THRESHOLD) {
         this.isDragging = true;
         this.tooltip.hide();
@@ -306,13 +290,9 @@ export class UIScene extends Phaser.Scene {
       }
 
       if (this.isDragging && this.dragSprite) {
-        // Move drag sprite to follow cursor
         this.dragSprite.setPosition(pointer.x, pointer.y);
-
-        // Update sell bin hover state
         this.updateSellBinHover(pointer.x, pointer.y);
 
-        // Highlight the tile under cursor on the game map
         const worldPoint = gameScene.cameras.main.getWorldPoint(pointer.x, pointer.y);
         const { col, row } = screenToTileRounded(worldPoint.x, worldPoint.y);
 
@@ -329,7 +309,6 @@ export class UIScene extends Phaser.Scene {
       if (!this.dragChampion) return;
 
       if (!this.isDragging) {
-        // It was a click, not a drag — show/toggle tooltip
         const champion = this.dragChampion;
         if (this.tooltip.isVisible() && this.tooltip.getChampion() === champion) {
           this.tooltip.hide();
@@ -342,11 +321,9 @@ export class UIScene extends Phaser.Scene {
         return;
       }
 
-      // It was a drag — handle drop
       gameScene.isoMap.clearDragHighlight();
       this.hideSellBin();
 
-      // Check sell bin first
       if (this.isOverSellBin(pointer.x, pointer.y)) {
         this.dropOnSellBin(gameScene);
         this.endDrag();
@@ -380,18 +357,15 @@ export class UIScene extends Phaser.Scene {
     this.dragFromBoard = fromBoard;
     this.tooltip.hide();
 
-    // Create a sprite that follows the cursor (in UIScene, screen coords)
     this.dragSprite = this.add.sprite(pointer.x, pointer.y, champion.textureKey);
     this.dragSprite.setScale(1.4);
     this.dragSprite.setAlpha(0.8);
     this.dragSprite.setDepth(2000);
 
-    // Hide the original from bench/board while dragging
     if (fromBoard) {
       champion.sprite.setVisible(false);
       champion.starIndicator.setVisible(false);
     } else {
-      // Hide bench icon
       const container = this.benchSlots[benchIndex];
       if (container) {
         const icon = container.getByName('icon') as Phaser.GameObjects.Sprite;
@@ -402,14 +376,10 @@ export class UIScene extends Phaser.Scene {
 
   private dropOnSellBin(gameScene: GameScene): void {
     const champion = this.dragChampion!;
-
-    // If dragging from board, need to restore visibility before selling
-    // (sellChampion handles removal from board/bench)
     if (this.dragFromBoard) {
       champion.sprite.setVisible(true);
       champion.starIndicator.setVisible(true);
     }
-
     gameScene.sellChampion(champion);
   }
 
@@ -417,13 +387,11 @@ export class UIScene extends Phaser.Scene {
     const champion = this.dragChampion!;
 
     if (this.dragFromBoard) {
-      // Moving from one tile to another
       if (champion.gridCol !== undefined && champion.gridRow !== undefined) {
         gameScene.isoMap.setOccupied(champion.gridCol, champion.gridRow, false);
       }
       champion.removeFromBoard();
     } else {
-      // Moving from bench to map — remove from bench
       const benchIdx = gameScene.bench.indexOf(champion);
       if (benchIdx !== -1) {
         gameScene.bench[benchIdx] = null;
@@ -438,25 +406,19 @@ export class UIScene extends Phaser.Scene {
     const targetSlotChamp = gameScene.bench[targetBenchIndex];
 
     if (this.dragFromBoard) {
-      // Board → bench
       if (targetSlotChamp === null || targetSlotChamp === undefined) {
         gameScene.removeChampionFromBoard(champion);
-        // removeChampionFromBoard puts it in first empty slot, but we want it at targetBenchIndex
-        // Find where it was placed and swap
         const autoIdx = gameScene.bench.indexOf(champion);
         if (autoIdx !== -1 && autoIdx !== targetBenchIndex) {
           gameScene.bench[autoIdx] = gameScene.bench[targetBenchIndex] ?? null;
           gameScene.bench[targetBenchIndex] = champion;
         }
       } else {
-        // Target bench slot occupied — just return to board
         champion.sprite.setVisible(true);
         champion.starIndicator.setVisible(true);
       }
     } else {
-      // Bench → bench (reorder)
       if (this.dragFromBenchIndex !== targetBenchIndex) {
-        // Swap the two bench slots
         gameScene.bench[this.dragFromBenchIndex] = targetSlotChamp ?? null;
         gameScene.bench[targetBenchIndex] = champion;
       }
@@ -470,11 +432,9 @@ export class UIScene extends Phaser.Scene {
     if (!champion) return;
 
     if (this.dragFromBoard) {
-      // Return to board — just show again
       champion.sprite.setVisible(true);
       champion.starIndicator.setVisible(true);
     }
-    // Bench items: updateBenchUI will restore the icon
     gameScene.events.emit('championsChanged');
   }
 
@@ -491,13 +451,17 @@ export class UIScene extends Phaser.Scene {
   }
 
   private getBenchSlotAt(screenX: number, screenY: number): number {
+    const m = this.layout;
+    const totalWidth = BENCH_SIZE * (m.benchSlotSize + m.benchSlotGap) - m.benchSlotGap;
+    const benchStartX = (m.width - totalWidth) / 2;
+
     for (let i = 0; i < BENCH_SIZE; i++) {
-      const slotX = this.benchStartX + i * (this.slotSize + this.slotGap);
+      const slotX = benchStartX + i * (m.benchSlotSize + m.benchSlotGap);
       if (
         screenX >= slotX &&
-        screenX <= slotX + this.slotSize &&
-        screenY >= this.benchY &&
-        screenY <= this.benchY + this.slotSize
+        screenX <= slotX + m.benchSlotSize &&
+        screenY >= m.benchY &&
+        screenY <= m.benchY + m.benchSlotSize
       ) {
         return i;
       }
@@ -506,7 +470,6 @@ export class UIScene extends Phaser.Scene {
   }
 
   private setupSellInput(gameScene: GameScene): void {
-    // Right-click to sell from board
     gameScene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (pointer.button !== 2) return;
       if (gameScene.phase !== 'shopping') return;
@@ -525,17 +488,19 @@ export class UIScene extends Phaser.Scene {
 
   private showGameOver(wave: number): void {
     if (this.gameOverOverlay) return;
+    const m = this.layout;
 
     this.gameOverOverlay = this.add.container(0, 0);
     this.gameOverOverlay.setScrollFactor(0);
     this.gameOverOverlay.setDepth(2000);
 
-    const bg = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x000000, 0.7);
+    const bg = this.add.rectangle(0, 0, m.width, m.height, 0x000000, 0.7);
     bg.setOrigin(0, 0);
     this.gameOverOverlay.add(bg);
 
-    const title = this.add.text(this.scale.width / 2, this.scale.height / 2 - 40, 'GAME OVER', {
-      fontSize: '48px',
+    const titleFs = m.isMobile ? 28 : 48;
+    const title = this.add.text(m.width / 2, m.height / 2 - 40, 'GAME OVER', {
+      fontSize: `${titleFs}px`,
       color: '#ff4444',
       fontFamily: 'monospace',
       fontStyle: 'bold',
@@ -543,16 +508,16 @@ export class UIScene extends Phaser.Scene {
     title.setOrigin(0.5);
     this.gameOverOverlay.add(title);
 
-    const info = this.add.text(this.scale.width / 2, this.scale.height / 2 + 20, `You survived ${wave - 1} waves!`, {
-      fontSize: '24px',
+    const info = this.add.text(m.width / 2, m.height / 2 + 20, `You survived ${wave - 1} waves!`, {
+      fontSize: `${m.isMobile ? 16 : 24}px`,
       color: '#ffffff',
       fontFamily: 'monospace',
     });
     info.setOrigin(0.5);
     this.gameOverOverlay.add(info);
 
-    const restart = this.add.text(this.scale.width / 2, this.scale.height / 2 + 70, 'Click to restart', {
-      fontSize: '18px',
+    const restart = this.add.text(m.width / 2, m.height / 2 + 70, 'Tap to restart', {
+      fontSize: `${m.isMobile ? 14 : 18}px`,
       color: '#88ff88',
       fontFamily: 'monospace',
     });

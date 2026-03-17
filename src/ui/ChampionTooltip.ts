@@ -3,6 +3,7 @@ import { Champion } from '../entities/Champion';
 import { COLORS, TRAIT_COLORS } from '../utils/constants';
 import { GameScene } from '../scenes/GameScene';
 import { getHeldItemName, getHeldItemColor, getHeldItemDescription, MAX_ITEMS_PER_CHAMPION } from '../data/items';
+import { getLayout } from '../utils/responsive';
 
 const PANEL_W = 220;
 const PANEL_H = 200;
@@ -213,11 +214,17 @@ export class ChampionTooltip {
     this.sellButton.setPosition(PANEL_W - 80, neededH - 34);
 
     // Position: prefer right side of champion, avoid edges
-    let x = screenX + 20;
+    const layout = getLayout(this.scene.scale.width, this.scene.scale.height);
+    const margin = layout.isMobile ? 10 : 20;
+    let x = screenX + margin;
     let y = screenY - neededH / 2;
-    if (x + PANEL_W > this.scene.scale.width) x = screenX - PANEL_W - 20;
-    if (y < 40) y = 40;
-    if (y + neededH > this.scene.scale.height - 120) y = this.scene.scale.height - 120 - neededH;
+    if (x + PANEL_W > this.scene.scale.width) x = screenX - PANEL_W - margin;
+    if (x < 4) x = 4;
+    const topBound = layout.hudHeight + 4;
+    if (y < topBound) y = topBound;
+    if (y + neededH > this.scene.scale.height - layout.shopPanelHeight - 40) {
+      y = this.scene.scale.height - layout.shopPanelHeight - 40 - neededH;
+    }
 
     this.container.setPosition(x, y);
     this.container.setVisible(true);
