@@ -17,13 +17,18 @@ export class SynergyManager {
   }
 
   calculateSynergies(): void {
-    // Count traits from placed champions
+    // Count traits from placed champions (unique champion IDs only)
     const traitCounts: Record<string, number> = {};
+    const seenPerTrait: Record<string, Set<string>> = {};
 
     for (const champion of this.scene.champions) {
       if (!champion.placed) continue;
       for (const trait of champion.traits) {
-        traitCounts[trait] = (traitCounts[trait] || 0) + 1;
+        if (!seenPerTrait[trait]) seenPerTrait[trait] = new Set();
+        if (!seenPerTrait[trait].has(champion.championId)) {
+          seenPerTrait[trait].add(champion.championId);
+          traitCounts[trait] = (traitCounts[trait] || 0) + 1;
+        }
       }
     }
 

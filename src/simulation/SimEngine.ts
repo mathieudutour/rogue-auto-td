@@ -456,10 +456,15 @@ export class SimEngine {
 
   applySynergies(): void {
     const traitCounts: Record<string, number> = {};
+    const seenPerTrait: Record<string, Set<string>> = {};
     for (const champ of this.state.champions) {
       if (!champ.placed) continue;
       for (const trait of champ.traits) {
-        traitCounts[trait] = (traitCounts[trait] || 0) + 1;
+        if (!seenPerTrait[trait]) seenPerTrait[trait] = new Set();
+        if (!seenPerTrait[trait].has(champ.championId)) {
+          seenPerTrait[trait].add(champ.championId);
+          traitCounts[trait] = (traitCounts[trait] || 0) + 1;
+        }
       }
     }
 

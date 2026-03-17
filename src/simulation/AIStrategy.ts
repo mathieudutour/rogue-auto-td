@@ -110,10 +110,15 @@ export class SmartAI implements AIStrategy {
     else if (copies >= 1) score += 5;
 
     const traitCounts: Record<string, number> = {};
+    const seenPerTrait: Record<string, Set<string>> = {};
     for (const champ of state.champions) {
       if (!champ.placed) continue;
       for (const trait of champ.traits) {
-        traitCounts[trait] = (traitCounts[trait] || 0) + 1;
+        if (!seenPerTrait[trait]) seenPerTrait[trait] = new Set();
+        if (!seenPerTrait[trait].has(champ.championId)) {
+          seenPerTrait[trait].add(champ.championId);
+          traitCounts[trait] = (traitCounts[trait] || 0) + 1;
+        }
       }
     }
     for (const trait of data.traits) {
@@ -244,12 +249,17 @@ export class SynergyAI implements AIStrategy {
     if (copies >= 2) score += 25; // would trigger merge
     else if (copies >= 1) score += 8;
 
-    // Bonus for synergy with existing board
+    // Bonus for synergy with existing board (unique champion IDs only)
     const traitCounts: Record<string, number> = {};
+    const seenPerTrait: Record<string, Set<string>> = {};
     for (const champ of state.champions) {
       if (!champ.placed) continue;
       for (const trait of champ.traits) {
-        traitCounts[trait] = (traitCounts[trait] || 0) + 1;
+        if (!seenPerTrait[trait]) seenPerTrait[trait] = new Set();
+        if (!seenPerTrait[trait].has(champ.championId)) {
+          seenPerTrait[trait].add(champ.championId);
+          traitCounts[trait] = (traitCounts[trait] || 0) + 1;
+        }
       }
     }
     for (const trait of data.traits) {
