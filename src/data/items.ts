@@ -145,6 +145,31 @@ export const COMBINED_ITEMS: CombinedItemData[] = [
     stats: { damage: 15, damageMult: 0.20 },
   },
 
+  {
+    id: 'zeals_edge',
+    name: "Zeal's Edge",
+    recipe: ['bf_sword', 'chain_vest'],
+    description: '+20 dmg, +15 range, 15% splash (30px)',
+    color: 0xcc8833,
+    stats: { damage: 20, range: 15, splashFrac: 0.15, splashRadius: 30 },
+  },
+  {
+    id: 'shojin',
+    name: 'Spear of Shojin',
+    recipe: ['bf_sword', 'tear'],
+    description: '+18 dmg, +15% AS',
+    color: 0x8844cc,
+    stats: { damage: 18, attackSpeed: 0.15 },
+  },
+  {
+    id: 'titans_resolve',
+    name: "Titan's Resolve",
+    recipe: ['bf_sword', 'giants_belt'],
+    description: '+30 dmg, +10% AS',
+    color: 0xcc5533,
+    stats: { damage: 30, attackSpeed: 0.10 },
+  },
+
   // Recurve Bow combinations
   {
     id: 'rapid_firecannon',
@@ -179,6 +204,15 @@ export const COMBINED_ITEMS: CombinedItemData[] = [
     stats: { attackSpeed: 0.20, burnDamage: 6, burnDuration: 2.0 },
   },
 
+  {
+    id: 'titans_bow',
+    name: "Titan's Bow",
+    recipe: ['recurve_bow', 'chain_vest'],
+    description: '+8 dmg, +20% AS, +15 range',
+    color: 0x88aa44,
+    stats: { damage: 8, attackSpeed: 0.20, range: 15 },
+  },
+
   // Chain Vest combinations
   {
     id: 'bramble_vest',
@@ -205,6 +239,23 @@ export const COMBINED_ITEMS: CombinedItemData[] = [
     stats: { damage: 10, range: 30 },
   },
 
+  {
+    id: 'protectors_vow',
+    name: "Protector's Vow",
+    recipe: ['chain_vest', 'needlessly_rod'],
+    description: '+10 dmg, +15% dmg, +10 range',
+    color: 0x9988aa,
+    stats: { damage: 10, damageMult: 0.15, range: 10 },
+  },
+  {
+    id: 'edge_of_night',
+    name: 'Edge of Night',
+    recipe: ['chain_vest', 'sparring_gloves'],
+    description: '+8 dmg, +15% crit, 1.8x crit, +10 range',
+    color: 0xbbbb88,
+    stats: { damage: 8, critChance: 0.15, critMult: 1.8, range: 10 },
+  },
+
   // Negatron combinations
   {
     id: 'quicksilver',
@@ -213,6 +264,31 @@ export const COMBINED_ITEMS: CombinedItemData[] = [
     recipe: ['negatron_cloak', 'negatron_cloak'],
     color: 0x66aadd,
     stats: { range: 35, attackSpeed: 0.10 },
+  },
+
+  {
+    id: 'chalice_of_power',
+    name: 'Chalice of Power',
+    recipe: ['negatron_cloak', 'tear'],
+    description: '+25 range, +15% AS',
+    color: 0x5599cc,
+    stats: { range: 25, attackSpeed: 0.15 },
+  },
+  {
+    id: 'zephyr',
+    name: 'Zephyr',
+    recipe: ['negatron_cloak', 'giants_belt'],
+    description: '+10 dmg, +25 range, slow 30% for 1s',
+    color: 0x66bbaa,
+    stats: { damage: 10, range: 25, slowAmount: 0.7, slowDuration: 1.0 },
+  },
+  {
+    id: 'steadfast_heart',
+    name: 'Steadfast Heart',
+    recipe: ['negatron_cloak', 'sparring_gloves'],
+    description: '+25 range, +15% crit, 1.8x crit dmg',
+    color: 0x88ccdd,
+    stats: { range: 25, critChance: 0.15, critMult: 1.8 },
   },
 
   // Needlessly Rod combinations
@@ -241,6 +317,15 @@ export const COMBINED_ITEMS: CombinedItemData[] = [
     stats: { damageMult: 0.20, burnDamage: 8, burnDuration: 3.0 },
   },
 
+  {
+    id: 'archangels_staff',
+    name: "Archangel's Staff",
+    recipe: ['needlessly_rod', 'tear'],
+    description: '+20% dmg, +15% AS',
+    color: 0x7744bb,
+    stats: { damageMult: 0.20, attackSpeed: 0.15 },
+  },
+
   // Tear combinations
   {
     id: 'blue_buff',
@@ -249,6 +334,15 @@ export const COMBINED_ITEMS: CombinedItemData[] = [
     recipe: ['tear', 'tear'],
     color: 0x2244cc,
     stats: { attackSpeed: 0.25 },
+  },
+
+  {
+    id: 'redemption',
+    name: 'Redemption',
+    recipe: ['tear', 'giants_belt'],
+    description: '+10 dmg, +15% AS, +1 gold on kill',
+    color: 0x88aa66,
+    stats: { damage: 10, attackSpeed: 0.15, bonusGoldOnKill: 1 },
   },
 
   // Giant's Belt combinations
@@ -275,6 +369,15 @@ export const COMBINED_ITEMS: CombinedItemData[] = [
     recipe: ['giants_belt', 'chain_vest'],
     color: 0xff6600,
     stats: { damage: 10, burnDamage: 10, burnDuration: 2.5 },
+  },
+
+  {
+    id: 'guardbreaker',
+    name: 'Guardbreaker',
+    recipe: ['giants_belt', 'sparring_gloves'],
+    description: '+12 dmg, +15% crit, 1.8x crit dmg',
+    color: 0xcc9966,
+    stats: { damage: 12, critChance: 0.15, critMult: 1.8 },
   },
 
   // Sparring Gloves combinations
