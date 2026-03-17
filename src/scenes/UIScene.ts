@@ -61,7 +61,7 @@ export class UIScene extends Phaser.Scene {
     gameScene.events.on('waveChanged', (wave: number) => this.hud.updateWave(wave));
     gameScene.events.on('phaseChanged', (phase: string) => {
       this.hud.updatePhase(phase);
-      // Shop stays visible during combat — players can buy/reroll/sell bench champs
+      this.shopPanel.updatePhase(phase);
     });
     gameScene.events.on('incomeBreakdown', (income: { base: number; interest: number; streak: number; total: number }) => {
       this.hud.updateGold(gameScene.economyManager.getGold());
@@ -87,6 +87,7 @@ export class UIScene extends Phaser.Scene {
     this.hud.updateLives(gameScene.lives);
     this.hud.updateWave(gameScene.waveNumber);
     this.hud.updatePhase(gameScene.phase);
+    this.shopPanel.updatePhase(gameScene.phase);
     if (gameScene.shopManager.shopSlots.length > 0) {
       this.shopPanel.updateSlots(gameScene.shopManager.shopSlots);
     }

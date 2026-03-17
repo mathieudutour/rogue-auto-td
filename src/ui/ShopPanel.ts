@@ -463,4 +463,8 @@ export class ShopPanel {
   updateLevel(level: number): void {
     this.buyXpButton.setVisible(level < MAX_LEVEL);
   }
+
+  updatePhase(phase: string): void {
+    this.startButton.setVisible(phase === 'shopping');
+  }
 }
