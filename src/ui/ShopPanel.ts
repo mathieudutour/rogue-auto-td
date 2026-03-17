@@ -163,15 +163,15 @@ export class ShopPanel {
     container.add(card);
 
     // Cost badge (top-left corner)
-    const badgeW = m.isMobile ? 16 : 24;
-    const badgeH = m.isMobile ? 14 : 18;
+    const badgeW = m.isMobile ? 20 : 24;
+    const badgeH = m.isMobile ? 16 : 18;
     const costBadge = this.scene.add.rectangle(0, 0, badgeW, badgeH, 0x888888, 1);
     costBadge.setOrigin(0, 0);
     costBadge.setName('costBadge');
     container.add(costBadge);
 
     const costText = this.scene.add.text(badgeW / 2, badgeH / 2, '', {
-      fontSize: `${m.isMobile ? 9 : 12}px`,
+      fontSize: `${m.isMobile ? 10 : 12}px`,
       color: '#ffffff',
       fontFamily: 'monospace',
       fontStyle: 'bold',
@@ -181,16 +181,16 @@ export class ShopPanel {
     container.add(costText);
 
     // Champion portrait
-    const portraitX = m.isMobile ? 14 : 26;
-    const portraitY = m.isMobile ? 22 : 32;
+    const portraitX = m.isMobile ? 16 : 26;
+    const portraitY = m.isMobile ? 26 : 32;
     const portrait = this.scene.add.sprite(portraitX, portraitY, 'champion_default');
-    portrait.setScale(m.isMobile ? 0.8 : 1.2);
+    portrait.setScale(m.isMobile ? 0.9 : 1.2);
     portrait.setName('portrait');
     portrait.setVisible(false);
     container.add(portrait);
 
     // Name text
-    const nameX = m.isMobile ? 28 : 44;
+    const nameX = m.isMobile ? 32 : 44;
     const nameY = m.isMobile ? 14 : 20;
     const nameText = this.scene.add.text(nameX, nameY, '', {
       fontSize: `${fs}px`,
@@ -204,8 +204,8 @@ export class ShopPanel {
     container.add(nameText);
 
     // Traits text
-    const traitText = this.scene.add.text(nameX, nameY + (m.isMobile ? 11 : 16), '', {
-      fontSize: `${m.isMobile ? 7 : 9}px`,
+    const traitText = this.scene.add.text(nameX, nameY + (m.isMobile ? 13 : 16), '', {
+      fontSize: `${m.isMobile ? 9 : 9}px`,
       color: '#aaaacc',
       fontFamily: 'monospace',
     });
@@ -214,9 +214,9 @@ export class ShopPanel {
     container.add(traitText);
 
     // Stats row
-    const statsY = m.isMobile ? 34 : 54;
+    const statsY = m.isMobile ? 40 : 54;
     const statsText = this.scene.add.text(4, statsY, '', {
-      fontSize: `${m.isMobile ? 7 : 9}px`,
+      fontSize: `${m.isMobile ? 9 : 9}px`,
       color: '#99aabb',
       fontFamily: 'monospace',
       lineSpacing: m.isMobile ? 1 : 2,
@@ -227,7 +227,7 @@ export class ShopPanel {
 
     // Attack type badge
     const atkBadge = this.scene.add.text(width - 4, statsY, '', {
-      fontSize: `${m.isMobile ? 7 : 9}px`,
+      fontSize: `${m.isMobile ? 9 : 9}px`,
       color: '#ffcc44',
       fontFamily: 'monospace',
       fontStyle: 'bold',
@@ -237,14 +237,14 @@ export class ShopPanel {
     container.add(atkBadge);
 
     // Buy button area at bottom
-    const buyH = m.isMobile ? 16 : 22;
+    const buyH = m.isMobile ? 20 : 22;
     const buyBar = this.scene.add.rectangle(0, height - buyH, width, buyH, 0x224422, 0.8);
     buyBar.setOrigin(0, 0);
     buyBar.setName('buyBar');
     container.add(buyBar);
 
     const buyText = this.scene.add.text(width / 2, height - buyH / 2, 'BUY', {
-      fontSize: `${m.isMobile ? 9 : 12}px`,
+      fontSize: `${m.isMobile ? 10 : 12}px`,
       color: '#66ff66',
       fontFamily: 'monospace',
       fontStyle: 'bold',

@@ -52,7 +52,7 @@ export class HUD {
 
     // Win streak indicator
     this.streakText = scene.add.text(isMobile ? 60 : 120, yCenter + 2, '', {
-      ...baseStyle, fontSize: `${fs - 2}px`, color: '#ff9944',
+      ...baseStyle, fontSize: `${fs}px`, color: '#ff9944',
     });
     this.streakText.setScrollFactor(0).setDepth(1001);
 
@@ -71,14 +71,14 @@ export class HUD {
     // Level / XP — right of center
     const levelX = isMobile ? w / 2 + 50 : w / 2 + 100;
     this.levelText = scene.add.text(levelX, yCenter, '', {
-      ...baseStyle, fontSize: `${isMobile ? fs - 1 : fs}px`, color: '#88bbee',
+      ...baseStyle, color: '#88bbee',
     });
     this.levelText.setScrollFactor(0).setDepth(1001);
 
     // Board count — compact on mobile, uses slash
     const boardX = isMobile ? w - 60 : w / 2 + 250;
     this.boardLimitText = scene.add.text(boardX, yCenter, '', {
-      ...baseStyle, color: '#aabbcc', fontSize: `${fs - 2}px`,
+      ...baseStyle, color: '#aabbcc',
     });
     this.boardLimitText.setScrollFactor(0).setDepth(1001);
 
@@ -90,7 +90,7 @@ export class HUD {
 
     // Income popup
     this.incomePopup = scene.add.text(8, h - 2, '', {
-      fontSize: `${isMobile ? 9 : 11}px`,
+      fontSize: `${isMobile ? 11 : 11}px`,
       color: '#ffd700',
       fontFamily: 'monospace',
       stroke: '#000000',

@@ -47,32 +47,31 @@ export function getLayout(width: number, height: number): LayoutMetrics {
   const isNarrow = width < 480;
   const scale = isMobile ? Math.max(width / 600, 0.55) : 1;
 
-  // Shop panel
-  const shopPanelHeight = isMobile ? 100 : 130;
+  // Shop panel — taller on mobile so it's visible above browser chrome
+  const shopPanelHeight = isMobile ? 140 : 130;
   const shopCardGap = isMobile ? 4 : 10;
-  // Calculate card width to fit 5 cards + 2 buttons within the screen width
-  const buttonSpace = isMobile ? 90 : 220; // space for left buttons + right start button
-  const availableForCards = width - buttonSpace;
+  const shopButtonWidth = isMobile ? 52 : 90;
+  const shopButtonHeight = isMobile ? 40 : 42;
+  // Cards fill remaining width
   const shopCardWidth = isMobile
-    ? Math.min(Math.floor((availableForCards - 4 * shopCardGap) / 5), 100)
+    ? Math.floor((width - 8 - 4 * shopCardGap) / 5)
     : 140;
-  const shopCardHeight = isMobile ? 74 : 100;
-  const shopButtonWidth = isMobile ? 44 : 90;
-  const shopButtonHeight = isMobile ? 36 : 42;
+  const shopCardHeight = isMobile ? 80 : 100;
+  const shopFontSize = isMobile ? 10 : 11;
 
-  // Bench
-  const benchSlotSize = isMobile ? 32 : 36;
+  // Bench — bigger touch targets on mobile
+  const benchSlotSize = isMobile ? 36 : 36;
   const benchSlotGap = isMobile ? 3 : 5;
 
-  // Items
-  const itemSlotSize = isMobile ? 22 : 24;
-  const itemSlotGap = isMobile ? 3 : 4;
+  // Items — bigger on mobile for touch
+  const itemSlotSize = isMobile ? 28 : 24;
+  const itemSlotGap = isMobile ? 4 : 4;
   const itemMaxDisplay = isMobile ? 8 : 10;
 
   // Vertical layout from bottom:
   // shop panel -> bench -> items
-  const benchY = height - shopPanelHeight - benchSlotSize - (isMobile ? 6 : 18);
-  const itemY = benchY - itemSlotSize - (isMobile ? 10 : 18);
+  const benchY = height - shopPanelHeight - benchSlotSize - (isMobile ? 8 : 18);
+  const itemY = benchY - itemSlotSize - (isMobile ? 12 : 18);
 
   return {
     width,
@@ -80,8 +79,8 @@ export function getLayout(width: number, height: number): LayoutMetrics {
     isMobile,
     scale,
 
-    hudHeight: isMobile ? 32 : 40,
-    hudFontSize: isMobile ? 11 : 14,
+    hudHeight: isMobile ? 36 : 40,
+    hudFontSize: isMobile ? 14 : 14,
 
     shopPanelHeight,
     shopCardWidth,
@@ -89,7 +88,7 @@ export function getLayout(width: number, height: number): LayoutMetrics {
     shopCardGap,
     shopButtonWidth,
     shopButtonHeight,
-    shopFontSize: isMobile ? 8 : 11,
+    shopFontSize,
 
     benchSlotSize,
     benchSlotGap,
@@ -102,8 +101,8 @@ export function getLayout(width: number, height: number): LayoutMetrics {
 
     defaultZoom: isNarrow ? 0.9 : isMobile ? 1.1 : 1.5,
 
-    synergyFontSize: isMobile ? 8 : 10,
-    synergyPillWidth: isMobile ? 100 : 130,
-    synergySpacing: isMobile ? 17 : 22,
+    synergyFontSize: isMobile ? 10 : 10,
+    synergyPillWidth: isMobile ? 110 : 130,
+    synergySpacing: isMobile ? 20 : 22,
   };
 }

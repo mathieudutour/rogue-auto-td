@@ -63,9 +63,9 @@ export class SynergyBar {
         ? `${synergy.count}/${synergy.nextTier.count}`
         : `${synergy.count}`;
 
-    // On mobile use abbreviated names
+    // On mobile use shorter names
     const name = this.isMobile
-      ? synergy.synergy.name.slice(0, 4)
+      ? synergy.synergy.name.slice(0, 6)
       : synergy.synergy.name;
 
     const text = this.scene.add.text(dotR * 2 + 6, 2, `${name} ${tierInfo}`, {

@@ -107,8 +107,8 @@ export class UIScene extends Phaser.Scene {
     const benchStartX = (m.width - totalWidth) / 2;
 
     // Bench label
-    const label = this.add.text(benchStartX - 2, m.benchY - (m.isMobile ? 10 : 14), 'BENCH', {
-      fontSize: `${m.isMobile ? 7 : 9}px`,
+    const label = this.add.text(benchStartX - 2, m.benchY - (m.isMobile ? 12 : 14), 'BENCH', {
+      fontSize: `${m.isMobile ? 9 : 9}px`,
       color: '#556677',
       fontFamily: 'monospace',
       fontStyle: 'bold',
@@ -132,7 +132,7 @@ export class UIScene extends Phaser.Scene {
       container.add(icon);
 
       const starText = this.add.text(m.benchSlotSize / 2, 2, '', {
-        fontSize: `${m.isMobile ? 7 : 8}px`,
+        fontSize: '8px',
         color: '#ffd700',
         fontFamily: 'monospace',
         fontStyle: 'bold',

@@ -41,8 +41,8 @@ export class ItemPanel {
     this.container.setDepth(1000);
 
     // Label
-    this.label = scene.add.text(this.panelStartX - 2, this.panelY - (m.isMobile ? 10 : 14), 'ITEMS', {
-      fontSize: `${m.isMobile ? 7 : 9}px`,
+    this.label = scene.add.text(this.panelStartX - 2, this.panelY - (m.isMobile ? 12 : 14), 'ITEMS', {
+      fontSize: '9px',
       color: '#556677',
       fontFamily: 'monospace',
       fontStyle: 'bold',
