@@ -292,7 +292,11 @@ export class UIScene extends Phaser.Scene {
 
         const tileType = gameScene.isoMap.getTileType(col, row);
         const isOccupied = gameScene.isoMap.isOccupied(col, row);
-        const isValid = tileType === TileType.Placeable && !isOccupied;
+        // Valid if placeable and either empty or occupied by a different champion (swap)
+        const occupiedByOther = isOccupied && gameScene.champions.some(
+          c => c.placed && c.gridCol === col && c.gridRow === row && c !== this.dragChampion
+        );
+        const isValid = tileType === TileType.Placeable && (!isOccupied || occupiedByOther);
 
         gameScene.isoMap.setDragHighlight(col, row, isValid);
       }
@@ -346,6 +350,8 @@ export class UIScene extends Phaser.Scene {
 
         if (tileType === TileType.Placeable && !isOccupied) {
           this.dropOnMap(gameScene, col, row);
+        } else if (tileType === TileType.Placeable && isOccupied) {
+          this.dropOnOccupiedTile(gameScene, col, row);
         } else {
           this.cancelDrag(gameScene);
         }
@@ -403,6 +409,58 @@ export class UIScene extends Phaser.Scene {
     }
 
     gameScene.placeChampion(champion, col, row);
+  }
+
+  /** Swap dragged champion with the champion occupying the target tile. */
+  private dropOnOccupiedTile(gameScene: GameScene, col: number, row: number): void {
+    const champion = this.dragChampion!;
+    const targetChamp = gameScene.champions.find(
+      c => c.placed && c.gridCol === col && c.gridRow === row
+    );
+
+    if (!targetChamp || targetChamp === champion) {
+      this.cancelDrag(gameScene);
+      return;
+    }
+
+    if (this.dragFromBoard) {
+      // Board-to-board swap: swap positions
+      const fromCol = champion.gridCol!;
+      const fromRow = champion.gridRow!;
+
+      // Remove both from their tiles
+      gameScene.isoMap.setOccupied(fromCol, fromRow, false);
+      gameScene.isoMap.setOccupied(col, row, false);
+      champion.removeFromBoard();
+      targetChamp.removeFromBoard();
+
+      // Place each at the other's position
+      gameScene.placeChampion(targetChamp, fromCol, fromRow);
+      gameScene.placeChampion(champion, col, row);
+    } else {
+      // Bench-to-board swap: dragged champion takes board spot, target goes to bench
+      const maxBoard = gameScene.economyManager.getMaxBoardSize();
+      // Since we're swapping 1-for-1, board count stays the same — always valid
+
+      const benchIdx = gameScene.bench.indexOf(champion);
+
+      // Remove target from board to the bench slot the dragged champ came from
+      gameScene.isoMap.setOccupied(col, row, false);
+      targetChamp.removeFromBoard();
+      if (benchIdx !== -1) {
+        gameScene.bench[benchIdx] = targetChamp;
+      } else {
+        const emptySlot = gameScene.bench.indexOf(null);
+        if (emptySlot !== -1) {
+          gameScene.bench[emptySlot] = targetChamp;
+        } else {
+          gameScene.bench.push(targetChamp);
+        }
+      }
+
+      // Place dragged champion on the board
+      gameScene.placeChampion(champion, col, row);
+    }
   }
 
   private dropOnBench(gameScene: GameScene, targetBenchIndex: number): void {
