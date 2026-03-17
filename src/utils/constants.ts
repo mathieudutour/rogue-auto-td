@@ -101,6 +101,8 @@ export const TRAIT_COLORS: Record<string, number> = {
   nature: 0x44ff44,
   shadow: 0x9944ff,
   arcane: 0xffaa22,
+  lightning: 0xffee44,
+  void: 0xcc44cc,
   warrior: 0xcc8844,
   ranger: 0x44cc44,
   mage: 0x4444ff,

@@ -101,10 +101,38 @@ export const SYNERGIES: SynergyData[] = [
     description: 'Arcane champions empower all allies with bonus damage and range',
     tiers: [
       { count: 2, description: '+15% damage, +15% range to ALL allies', bonuses: { damageMult: 1.15, rangeMult: 1.15, allAllies: true } },
+      { count: 4, description: '+30% dmg, +25% range, +15% AS to ALL allies', bonuses: { damageMult: 1.3, rangeMult: 1.25, attackSpeedMult: 1.15, allAllies: true } },
+      {
+        count: 6,
+        description: 'ARCANUM: +45% dmg, +35% range, +25% AS to ALL allies',
+        bonuses: { damageMult: 1.45, rangeMult: 1.35, attackSpeedMult: 1.25, allAllies: true },
+      },
+    ],
+  },
+  {
+    id: 'lightning',
+    name: 'Lightning',
+    description: 'Lightning champions attack with electrifying speed and chain to nearby enemies',
+    tiers: [
+      { count: 2, description: '+25% AS, chain to 1 enemy (65% dmg, 60px)', bonuses: { attackSpeedMult: 1.25, chainOnHit: 1, chainDamageFrac: 0.65, chainRange: 60 } },
+      { count: 4, description: '+45% AS, chain to 2 (70% dmg, 75px), +20% dmg', bonuses: { attackSpeedMult: 1.45, chainOnHit: 2, chainDamageFrac: 0.7, chainRange: 75, damageMult: 1.2 } },
+      {
+        count: 6,
+        description: 'OVERCHARGE: +70% AS, chain to 3 (80% dmg, 90px), +40% dmg',
+        bonuses: { attackSpeedMult: 1.7, chainOnHit: 3, chainDamageFrac: 0.8, chainRange: 90, damageMult: 1.4 },
+      },
+    ],
+  },
+  {
+    id: 'void',
+    name: 'Void',
+    description: 'Void champions deal devastating damage and execute weakened enemies',
+    tiers: [
+      { count: 2, description: '+25% damage, execute below 8% HP', bonuses: { damageMult: 1.25, executeThreshold: 0.08 } },
       {
         count: 4,
-        description: 'ARCANUM: +30% dmg, +25% range, +15% AS to ALL allies',
-        bonuses: { damageMult: 1.3, rangeMult: 1.25, attackSpeedMult: 1.15, allAllies: true },
+        description: 'OBLIVION: +45% dmg, execute below 15% HP, +1 gold/kill',
+        bonuses: { damageMult: 1.45, executeThreshold: 0.15, bonusGoldOnKill: 1 },
       },
     ],
   },
@@ -172,10 +200,11 @@ export const SYNERGIES: SynergyData[] = [
     description: 'Guardians boost all allies with range and power',
     tiers: [
       { count: 2, description: '+20% range, +15% dmg to ALL allies', bonuses: { rangeMult: 1.2, damageMult: 1.15, allAllies: true } },
+      { count: 4, description: '+30% range, +30% dmg, +20% AS to ALL allies', bonuses: { rangeMult: 1.3, damageMult: 1.3, attackSpeedMult: 1.2, allAllies: true } },
       {
-        count: 4,
-        description: 'BASTION: +30% range, +30% dmg, +20% AS to ALL allies',
-        bonuses: { rangeMult: 1.3, damageMult: 1.3, attackSpeedMult: 1.2, allAllies: true },
+        count: 6,
+        description: 'BASTION: +40% range, +45% dmg, +30% AS, +1 gold/kill to ALL allies',
+        bonuses: { rangeMult: 1.4, damageMult: 1.45, attackSpeedMult: 1.3, bonusGoldOnKill: 1, allAllies: true },
       },
     ],
   },
