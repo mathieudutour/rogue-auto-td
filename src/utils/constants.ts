@@ -69,7 +69,7 @@ export const POOL_SIZES: Record<number, number> = {
   1: 30,
   2: 20,
   3: 15,
-  4: 10,
+  4: 12,
   5: 10,
 };
 
