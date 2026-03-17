@@ -7,9 +7,10 @@ import {
   generateUITextures,
   generateItemTextures,
 } from '../graphics/TextureGenerator';
+import { MetaProgressionManager } from '../systems/MetaProgressionManager';
 
 /**
- * BootScene: generates all textures via TextureGenerator, then starts the game.
+ * BootScene: generates all textures via TextureGenerator, then starts meta hub.
  */
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -24,6 +25,7 @@ export class BootScene extends Phaser.Scene {
     generateUITextures(this);
     generateItemTextures(this);
 
-    this.scene.start('GameScene');
+    const meta = new MetaProgressionManager();
+    this.scene.start('MetaScene', { meta });
   }
 }

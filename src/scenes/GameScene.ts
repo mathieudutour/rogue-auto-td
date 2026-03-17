@@ -13,6 +13,8 @@ import { Enemy } from '../entities/Enemy';
 import { Champion } from '../entities/Champion';
 import { HeldItem, COMPONENTS } from '../data/items';
 import { getLayout } from '../utils/responsive';
+import { MetaProgressionManager } from '../systems/MetaProgressionManager';
+import { RunConfig, Blessing, Curse } from '../data/meta';
 
 export type GamePhase = 'shopping' | 'combat';
 
@@ -26,6 +28,11 @@ export class GameScene extends Phaser.Scene {
   shopManager!: ShopManager;
   synergyManager!: SynergyManager;
   economyManager!: EconomyManager;
+
+  // Meta progression
+  meta!: MetaProgressionManager;
+  runConfig!: RunConfig;
+  freeRerollsRemaining: number = 0;
 
   // Game state
   phase: GamePhase = 'shopping';
@@ -50,6 +57,11 @@ export class GameScene extends Phaser.Scene {
 
   mapData!: MapData;
 
+  init(data: { meta?: MetaProgressionManager; runConfig?: RunConfig }): void {
+    this.meta = data.meta || new MetaProgressionManager();
+    this.runConfig = data.runConfig || { blessing: null, curses: [] };
+  }
+
   create(): void {
     // Generate a random map each game
     this.mapData = generateMap();
@@ -58,12 +70,43 @@ export class GameScene extends Phaser.Scene {
     this.isoMap = new IsometricMap(this, this.mapData);
     this.pathGraph = new PathGraph(this.mapData.pathWaypoints);
 
+    // Apply meta upgrades
+    const startGold = STARTING_GOLD + this.meta.getStartingGoldBonus();
+    this.lives = STARTING_LIVES + this.meta.getStartingLivesBonus();
+
+    // Apply curse: fragile
+    if (this.runConfig.curses.some(c => c.id === 'fragile')) {
+      this.lives = Math.max(1, this.lives - 5);
+    }
+
+    // Apply blessing: item_cache (start with 2 components)
+    if (this.runConfig.blessing?.id === 'item_cache') {
+      for (let i = 0; i < 2; i++) {
+        const idx = Math.floor(Math.random() * COMPONENTS.length);
+        this.itemInventory.push({ isComponent: true, componentId: COMPONENTS[idx].id });
+      }
+    }
+
+    // Free rerolls per round from meta upgrade
+    this.freeRerollsRemaining = this.meta.getFreeRerolls();
+
     // Initialize systems
-    this.economyManager = new EconomyManager(STARTING_GOLD);
+    this.economyManager = new EconomyManager(startGold, this.meta, this.runConfig);
     this.waveManager = new WaveManager(this);
     this.combatSystem = new CombatSystem(this);
     this.shopManager = new ShopManager(this);
     this.synergyManager = new SynergyManager(this);
+
+    // Apply blessing: starting level
+    if (this.runConfig.blessing?.id === 'early_bird') {
+      this.economyManager.addXp(100); // enough to reach level 3
+    }
+
+    // Apply meta starting XP bonus
+    const startXp = this.meta.getStartingXpBonus();
+    if (startXp > 0) {
+      this.economyManager.addXp(startXp);
+    }
 
     // Center camera on map
     const center = getMapCenter();
@@ -131,19 +174,35 @@ export class GameScene extends Phaser.Scene {
       }
 
       const income = this.economyManager.awardWaveIncome();
-      this.economyManager.addXp(2); // passive XP per wave
+      // Passive XP per wave (halved by slow_learner curse)
+      const xpGain = this.runConfig.curses.some(c => c.id === 'slow_learner') ? 1 : 2;
+      this.economyManager.addXp(xpGain);
       this.events.emit('incomeBreakdown', income);
 
       // Generate a new map and randomly place champions
       this.regenerateMap();
     }
 
+    // Reset free rerolls each round
+    this.freeRerollsRemaining = this.meta.getFreeRerolls();
+
     // Item drops: guaranteed component on waves 1,2,3, then every 3rd wave
-    if (this.waveNumber <= 3 || this.waveNumber % 3 === 0) {
+    const isDropWave = this.waveNumber <= 3 || this.waveNumber % 3 === 0;
+    const isBonusWave = this.waveNumber > 1 && this.waveNumber % 5 === 0;
+    const doubleDrop = this.runConfig.blessing?.id === 'double_drop';
+
+    if (isDropWave) {
       this.dropRandomComponent();
+      if (doubleDrop) this.dropRandomComponent();
     }
-    // Bonus: extra component on waves 5, 10, 15... (carousel-like)
-    if (this.waveNumber > 1 && this.waveNumber % 5 === 0) {
+    if (isBonusWave) {
+      this.dropRandomComponent();
+      if (doubleDrop) this.dropRandomComponent();
+    }
+
+    // Meta upgrade: item luck (chance for bonus drop)
+    const itemLuck = this.meta.getItemLuckPercent();
+    if (itemLuck > 0 && Math.random() * 100 < itemLuck) {
       this.dropRandomComponent();
     }
 
@@ -347,7 +406,9 @@ export class GameScene extends Phaser.Scene {
 
   private gameOver(): void {
     this.phase = 'shopping'; // Stop combat
-    this.events.emit('gameOver', this.waveNumber);
+    const waveSurvived = this.waveNumber - 1;
+    const soulsEarned = this.meta.completeRun(waveSurvived, this.runConfig.curses);
+    this.events.emit('gameOver', this.waveNumber, soulsEarned);
   }
 
   buyXp(): boolean {

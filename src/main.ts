@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
+import { MetaScene } from './scenes/MetaScene';
+import { RunStartScene } from './scenes/RunStartScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -9,7 +11,7 @@ const config: Phaser.Types.Core.GameConfig = {
   width: window.innerWidth,
   height: window.innerHeight,
   backgroundColor: '#1a1a2e',
-  scene: [BootScene, GameScene, UIScene],
+  scene: [BootScene, MetaScene, RunStartScene, GameScene, UIScene],
   autoRound: true,
   scale: {
     mode: Phaser.Scale.RESIZE,

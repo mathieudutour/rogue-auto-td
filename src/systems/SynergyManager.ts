@@ -74,6 +74,15 @@ export class SynergyManager {
       }
     }
 
+    // Apply blessing bonuses to champions
+    const blessing = this.scene.runConfig?.blessing;
+    if (blessing) {
+      for (const champion of this.scene.champions) {
+        if (!champion.placed) continue;
+        this.applyBlessingBonus(champion, blessing.id);
+      }
+    }
+
     // Sort: active synergies first, then by count
     this.activeSynergies.sort((a, b) => {
       const aActive = a.activeTier ? 1 : 0;
@@ -83,5 +92,44 @@ export class SynergyManager {
     });
 
     this.scene.events.emit('synergiesChanged', this.activeSynergies);
+  }
+
+  private applyBlessingBonus(champion: any, blessingId: string): void {
+    const traits = champion.traits as string[];
+
+    // Element affinities
+    if (blessingId === 'fire_affinity' && traits.includes('fire')) {
+      champion.applySynergyBonus({ damageMult: 0.15 });
+    } else if (blessingId === 'ice_affinity' && traits.includes('ice')) {
+      champion.applySynergyBonus({ attackSpeedMult: 0.15 });
+    } else if (blessingId === 'nature_affinity' && traits.includes('nature')) {
+      champion.applySynergyBonus({ bonusRange: 20 });
+    } else if (blessingId === 'shadow_affinity' && traits.includes('shadow')) {
+      champion.applySynergyBonus({ critChance: 0.15 });
+    } else if (blessingId === 'lightning_affinity' && traits.includes('lightning')) {
+      champion.applySynergyBonus({ attackSpeedMult: 0.15 });
+    } else if (blessingId === 'void_affinity' && traits.includes('void')) {
+      champion.applySynergyBonus({ damageMult: 0.15 });
+    } else if (blessingId === 'arcane_affinity' && traits.includes('arcane')) {
+      champion.applySynergyBonus({ bonusRange: 15, damageMult: 0.10 });
+    }
+
+    // Class affinities
+    if (blessingId === 'warrior_might' && traits.includes('warrior')) {
+      champion.applySynergyBonus({ damageMult: 0.20 });
+    } else if (blessingId === 'ranger_precision' && traits.includes('ranger')) {
+      champion.applySynergyBonus({ bonusRange: 30 });
+    } else if (blessingId === 'mage_power' && traits.includes('mage')) {
+      champion.applySynergyBonus({ damageMult: 0.20 });
+    } else if (blessingId === 'assassin_edge' && traits.includes('assassin')) {
+      champion.applySynergyBonus({ critChance: 0.20, critMult: 2.0 });
+    } else if (blessingId === 'guardian_wall' && traits.includes('guardian')) {
+      champion.applySynergyBonus({ bonusRange: 25, damageMult: 0.10 });
+    }
+
+    // Global blessings
+    if (blessingId === 'all_for_one') {
+      champion.applySynergyBonus({ damageMult: 0.08, attackSpeedMult: 0.08 });
+    }
   }
 }

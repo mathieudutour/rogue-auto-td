@@ -36,7 +36,10 @@ export class ShopManager {
   rollShop(): void {
     this.shopSlots = [];
 
-    for (let i = 0; i < SHOP_SIZE; i++) {
+    const extraSlot = this.scene.runConfig?.blessing?.id === 'merchant' ? 1 : 0;
+    const slotCount = SHOP_SIZE + extraSlot;
+
+    for (let i = 0; i < slotCount; i++) {
       const champ = this.rollOne();
       if (champ) {
         this.shopSlots.push({ championData: champ, available: true });
@@ -49,7 +52,10 @@ export class ShopManager {
   private rollOne(): ChampionData | null {
     // First, pick a cost tier based on level odds
     const level = this.scene.economyManager.level;
-    const odds = SHOP_ODDS_PER_LEVEL[level] || SHOP_ODDS_PER_LEVEL[2];
+    const luckyRolls = this.scene.runConfig?.blessing?.id === 'lucky_rolls';
+    // Lucky rolls: use odds one level higher
+    const effectiveLevel = luckyRolls ? Math.min(level + 1, 9) : level;
+    const odds = SHOP_ODDS_PER_LEVEL[effectiveLevel] || SHOP_ODDS_PER_LEVEL[2];
     const tierRoll = Math.random();
     let costTier = 1;
     let cumulative = 0;
@@ -139,7 +145,15 @@ export class ShopManager {
   }
 
   reroll(): boolean {
-    if (!this.scene.economyManager.spendGold(REROLL_COST)) return false;
+    // Check for free rerolls first
+    if (this.scene.freeRerollsRemaining > 0) {
+      this.scene.freeRerollsRemaining--;
+    } else {
+      const discount = this.scene.meta?.getRerollDiscount() ?? 0;
+      const inflationCurse = this.scene.runConfig?.curses.some(c => c.id === 'inflation') ? 1 : 0;
+      const cost = Math.max(0, REROLL_COST - discount + inflationCurse);
+      if (cost > 0 && !this.scene.economyManager.spendGold(cost)) return false;
+    }
 
     // Return unbought champions to pool
     for (const slot of this.shopSlots) {

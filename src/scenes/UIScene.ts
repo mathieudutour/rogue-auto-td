@@ -79,7 +79,7 @@ export class UIScene extends Phaser.Scene {
       this.hud.updateBoardCount(gameScene.getPlacedCount(), maxBoard);
       this.shopPanel.updateLevel(level);
     });
-    gameScene.events.on('gameOver', (wave: number) => this.showGameOver(wave));
+    gameScene.events.on('gameOver', (wave: number, soulsEarned: number) => this.showGameOver(wave, soulsEarned));
     gameScene.events.on('itemInventoryChanged', (items: any[]) => this.itemPanel.update(items));
 
     // Initial UI state
@@ -555,9 +555,10 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
-  private showGameOver(wave: number): void {
+  private showGameOver(wave: number, soulsEarned: number = 0): void {
     if (this.gameOverOverlay) return;
     const m = this.layout;
+    const gameScene = this.scene.get('GameScene') as GameScene;
 
     this.gameOverOverlay = this.add.container(0, 0);
     this.gameOverOverlay.setScrollFactor(0);
@@ -568,7 +569,7 @@ export class UIScene extends Phaser.Scene {
     this.gameOverOverlay.add(bg);
 
     const titleFs = m.isMobile ? 28 : 48;
-    const title = this.add.text(m.width / 2, m.height / 2 - 40, 'GAME OVER', {
+    const title = this.add.text(m.width / 2, m.height / 2 - 60, 'GAME OVER', {
       fontSize: `${titleFs}px`,
       color: '#ff4444',
       fontFamily: 'monospace',
@@ -577,7 +578,7 @@ export class UIScene extends Phaser.Scene {
     title.setOrigin(0.5);
     this.gameOverOverlay.add(title);
 
-    const info = this.add.text(m.width / 2, m.height / 2 + 20, `You survived ${wave - 1} waves!`, {
+    const info = this.add.text(m.width / 2, m.height / 2 - 10, `You survived ${wave - 1} waves!`, {
       fontSize: `${m.isMobile ? 16 : 24}px`,
       color: '#ffffff',
       fontFamily: 'monospace',
@@ -585,7 +586,38 @@ export class UIScene extends Phaser.Scene {
     info.setOrigin(0.5);
     this.gameOverOverlay.add(info);
 
-    const restart = this.add.text(m.width / 2, m.height / 2 + 70, 'Tap to restart', {
+    // Souls earned
+    if (soulsEarned > 0) {
+      const soulsText = this.add.text(m.width / 2, m.height / 2 + 25, `+${soulsEarned} souls`, {
+        fontSize: `${m.isMobile ? 18 : 26}px`,
+        color: '#cc88ff',
+        fontFamily: 'monospace',
+        fontStyle: 'bold',
+      });
+      soulsText.setOrigin(0.5);
+      this.gameOverOverlay.add(soulsText);
+    }
+
+    // Blessing/curse info
+    const blessing = gameScene.runConfig?.blessing;
+    const curses = gameScene.runConfig?.curses || [];
+    let modText = '';
+    if (blessing) modText += `Blessing: ${blessing.name}`;
+    if (curses.length > 0) {
+      if (modText) modText += '  |  ';
+      modText += `Curses: ${curses.map(c => c.name).join(', ')}`;
+    }
+    if (modText) {
+      const modLabel = this.add.text(m.width / 2, m.height / 2 + (soulsEarned > 0 ? 55 : 35), modText, {
+        fontSize: `${m.isMobile ? 9 : 11}px`,
+        color: '#667788',
+        fontFamily: 'monospace',
+      });
+      modLabel.setOrigin(0.5);
+      this.gameOverOverlay.add(modLabel);
+    }
+
+    const restart = this.add.text(m.width / 2, m.height / 2 + 90, 'Tap to continue', {
       fontSize: `${m.isMobile ? 14 : 18}px`,
       color: '#88ff88',
       fontFamily: 'monospace',
@@ -597,9 +629,10 @@ export class UIScene extends Phaser.Scene {
     bg.on('pointerdown', () => {
       this.gameOverOverlay?.destroy();
       this.gameOverOverlay = null;
+      const meta = gameScene.meta;
       this.scene.stop('UIScene');
       this.scene.stop('GameScene');
-      this.scene.start('GameScene');
+      this.scene.start('MetaScene', { meta });
     });
   }
 }

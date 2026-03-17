@@ -10,6 +10,8 @@ import {
   BASE_WAVE_GOLD,
   MAX_WIN_STREAK_BONUS,
 } from '../utils/constants';
+import { MetaProgressionManager } from './MetaProgressionManager';
+import { RunConfig } from '../data/meta';
 
 export class EconomyManager {
   private gold: number;
@@ -17,9 +19,22 @@ export class EconomyManager {
   xp: number = 0;
   winStreak: number = 0;
 
-  constructor(startingGold: number) {
+  // Meta-driven modifiers
+  private maxInterestBonus: number;
+  private incomeBonus: number;   // from blessing/curse
+  private noInterest: boolean;   // from curse
+
+  constructor(startingGold: number, meta?: MetaProgressionManager, runConfig?: RunConfig) {
     this.gold = startingGold;
     this.level = STARTING_LEVEL;
+    this.maxInterestBonus = meta?.getMaxInterestBonus() ?? 0;
+
+    // Income modifiers from blessings/curses
+    let bonus = 0;
+    if (runConfig?.blessing?.id === 'gold_rush') bonus += 2;
+    if (runConfig?.curses.some(c => c.id === 'famine')) bonus -= 2;
+    this.incomeBonus = bonus;
+    this.noInterest = runConfig?.curses.some(c => c.id === 'no_interest') ?? false;
   }
 
   getGold(): number {
@@ -41,8 +56,9 @@ export class EconomyManager {
   }
 
   calculateInterest(): number {
+    if (this.noInterest) return 0;
     const interest = Math.floor(this.gold / 10) * INTEREST_PER_10_GOLD;
-    return Math.min(interest, MAX_INTEREST);
+    return Math.min(interest, MAX_INTEREST + this.maxInterestBonus);
   }
 
   /** Calculate streak bonus gold (1 per win, capped) */
@@ -62,7 +78,7 @@ export class EconomyManager {
 
   /** Calculate and award end-of-wave income. Returns breakdown. */
   awardWaveIncome(): { base: number; interest: number; streak: number; total: number } {
-    const base = BASE_WAVE_GOLD;
+    const base = Math.max(0, BASE_WAVE_GOLD + this.incomeBonus);
     const interest = this.calculateInterest();
     const streak = this.getStreakBonus();
     const total = base + interest + streak;

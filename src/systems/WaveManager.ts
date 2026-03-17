@@ -62,7 +62,11 @@ export class WaveManager {
     const data = ENEMY_TYPES[type];
     if (!data) return;
 
-    const healthMult = (this as any)._healthMult || 1;
+    let healthMult = (this as any)._healthMult || 1;
+    // Armored foes curse: +25% enemy HP
+    if (this.scene.runConfig?.curses.some(c => c.id === 'armored_foes')) {
+      healthMult *= 1.25;
+    }
     const enemy = new Enemy(
       this.scene,
       this.scene.pathGraph,
