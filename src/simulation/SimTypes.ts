@@ -1,5 +1,7 @@
 /** Lightweight types for headless simulation — no Phaser dependency */
 
+import { UltimateData } from '../data/champions';
+
 export interface SimSynergyBonuses {
   damageMult: number;
   attackSpeedMult: number;
@@ -67,6 +69,11 @@ export interface SimChampion {
   gridCol: number;
   gridRow: number;
 
+  // Mana & Ultimate
+  mana: number;
+  manaMax: number;
+  ultimate: UltimateData;
+
   // Combat
   attackCooldown: number;
 }
@@ -89,6 +96,7 @@ export interface SimEnemy {
   dotTickTimer: number;
   dotDamagePerTick: number;
   dotTickInterval: number;
+  stunTimer: number;
 }
 
 export interface SimProjectile {

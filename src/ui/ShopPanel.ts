@@ -393,12 +393,12 @@ export class ShopPanel {
         traitText.setText(traitStr);
 
         if (m.isMobile) {
-          statsText.setText(`D${d.stats.damage} R${d.stats.range} S${d.stats.attackSpeed.toFixed(1)}`);
+          statsText.setText(`D${d.stats.damage} R${d.stats.range} S${d.stats.attackSpeed.toFixed(1)}\n${d.ultimate.name}`);
         } else {
           const dmgStr = `DMG ${d.stats.damage}`;
           const rngStr = `RNG ${d.stats.range}`;
           const spdStr = `SPD ${d.stats.attackSpeed.toFixed(1)}`;
-          statsText.setText(`${dmgStr}  ${rngStr}\n${spdStr}`);
+          statsText.setText(`${dmgStr}  ${rngStr}\n${spdStr}  ULT: ${d.ultimate.name}`);
         }
 
         buyBar.setFillStyle(0x224422, 0.8);

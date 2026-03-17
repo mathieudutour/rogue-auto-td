@@ -342,6 +342,9 @@ export class SimEngine {
       range: baseRange,
       attackSpeed: baseAttackSpeed,
       synergyBonuses: defaultSimBonuses(),
+      mana: 0,
+      manaMax: data.stats.manaMax,
+      ultimate: data.ultimate,
       x: 0,
       y: 0,
       placed: false,
@@ -548,9 +551,10 @@ export class SimEngine {
     const projectiles: SimProjectile[] = [];
     let livesLost = 0;
 
-    // Reset champion cooldowns
+    // Reset champion cooldowns and mana
     for (const champ of this.state.champions) {
       champ.attackCooldown = 0;
+      champ.mana = 0;
     }
 
     // Run simulation at fixed timestep
@@ -584,6 +588,7 @@ export class SimEngine {
                 dotTickTimer: 0,
                 dotDamagePerTick: 0,
                 dotTickInterval: 0,
+                stunTimer: 0,
               });
             }
             queue.remaining--;
@@ -596,6 +601,12 @@ export class SimEngine {
       // Update enemy status effects & movement
       for (const enemy of enemies) {
         if (!enemy.alive) continue;
+
+        // Update stun
+        if (enemy.stunTimer > 0) {
+          enemy.stunTimer -= dt;
+          continue; // Stunned: skip movement and other effects
+        }
 
         // Update slow
         if (enemy.slowTimer > 0) {
@@ -626,13 +637,23 @@ export class SimEngine {
         }
       }
 
-      // Champion targeting & attacks
+      // Champion mana generation, ultimates, and attacks
       for (const champ of this.state.champions) {
         if (!champ.placed) continue;
+
+        // Passive mana
+        champ.mana = Math.min(champ.manaMax, champ.mana + 3 * dt);
+
+        // Check ultimate cast
+        if (champ.mana >= champ.manaMax) {
+          this.castSimUltimate(champ, enemies);
+          champ.mana = 0;
+        }
+
+        // Normal attacks
         champ.attackCooldown -= dt;
 
         if (champ.attackCooldown <= 0) {
-          // Find target (furthest along path within range)
           let bestEnemy: SimEnemy | null = null;
           let bestProgress = -1;
 
@@ -659,6 +680,8 @@ export class SimEngine {
               synergy: { ...champ.synergyBonuses },
             });
             champ.attackCooldown = 1 / champ.attackSpeed;
+            // Mana on attack
+            champ.mana = Math.min(champ.manaMax, champ.mana + 10);
           }
         }
       }
@@ -812,6 +835,227 @@ export class SimEngine {
       target.speed = 0;
       target.slowTimer = Math.max(target.slowTimer, s.freezeDuration);
     }
+  }
+
+  // --- Ultimate casting (headless) ---
+
+  private castSimUltimate(champ: SimChampion, enemies: SimEnemy[]): void {
+    const ult = champ.ultimate;
+
+    switch (ult.type) {
+      case 'aoe_damage': {
+        const radius = ult.radius ?? champ.range;
+        const dmg = ult.damage ?? champ.damage * 3;
+        for (const enemy of enemies) {
+          if (!enemy.alive) continue;
+          const pos = getPointAtDistance(this.path, enemy.distanceTraveled);
+          if (this.dist(champ.x, champ.y, pos.x, pos.y) <= radius) {
+            enemy.health -= dmg;
+            if (enemy.health <= 0) enemy.alive = false;
+          }
+        }
+        break;
+      }
+
+      case 'meteor': {
+        // Target the enemy closest to the end (most progress)
+        let target: SimEnemy | null = null;
+        let bestProgress = -1;
+        for (const enemy of enemies) {
+          if (!enemy.alive) continue;
+          const pos = getPointAtDistance(this.path, enemy.distanceTraveled);
+          if (this.dist(champ.x, champ.y, pos.x, pos.y) <= champ.range && enemy.distanceTraveled > bestProgress) {
+            bestProgress = enemy.distanceTraveled;
+            target = enemy;
+          }
+        }
+        if (!target) break;
+        const targetPos = getPointAtDistance(this.path, target.distanceTraveled);
+        const radius = ult.radius ?? 60;
+        const dmg = ult.damage ?? champ.damage * 5;
+        for (const enemy of enemies) {
+          if (!enemy.alive) continue;
+          const ePos = getPointAtDistance(this.path, enemy.distanceTraveled);
+          if (this.dist(targetPos.x, targetPos.y, ePos.x, ePos.y) <= radius) {
+            enemy.health -= dmg;
+            if (enemy.health <= 0) enemy.alive = false;
+          }
+        }
+        break;
+      }
+
+      case 'freeze_all': {
+        const radius = ult.radius ?? champ.range;
+        const dur = ult.duration ?? 2.0;
+        for (const enemy of enemies) {
+          if (!enemy.alive) continue;
+          const pos = getPointAtDistance(this.path, enemy.distanceTraveled);
+          if (this.dist(champ.x, champ.y, pos.x, pos.y) <= radius) {
+            // Freeze = slow to 0
+            enemy.slowMultiplier = 0;
+            enemy.speed = 0;
+            enemy.slowTimer = Math.max(enemy.slowTimer, dur);
+          }
+        }
+        break;
+      }
+
+      case 'stun_aoe': {
+        const radius = ult.radius ?? champ.range;
+        const dur = ult.duration ?? 2.0;
+        for (const enemy of enemies) {
+          if (!enemy.alive) continue;
+          const pos = getPointAtDistance(this.path, enemy.distanceTraveled);
+          if (this.dist(champ.x, champ.y, pos.x, pos.y) <= radius) {
+            enemy.stunTimer = Math.max(enemy.stunTimer, dur);
+          }
+        }
+        break;
+      }
+
+      case 'poison_cloud': {
+        const radius = ult.radius ?? champ.range;
+        const dmg = ult.damage ?? 10;
+        const dur = ult.duration ?? 4.0;
+        for (const enemy of enemies) {
+          if (!enemy.alive) continue;
+          const pos = getPointAtDistance(this.path, enemy.distanceTraveled);
+          if (this.dist(champ.x, champ.y, pos.x, pos.y) <= radius) {
+            if (dmg > enemy.dotDamagePerTick || enemy.dotTimer <= 0) {
+              enemy.dotDamagePerTick = dmg;
+              enemy.dotTickInterval = 0.5; // tickRate=2 -> interval=0.5
+            }
+            enemy.dotTimer = Math.max(enemy.dotTimer, dur);
+            if (enemy.dotTickTimer <= 0) enemy.dotTickTimer = enemy.dotTickInterval;
+          }
+        }
+        break;
+      }
+
+      case 'ally_boost': {
+        const mult = ult.value ?? 0.4;
+        // In headless sim, directly boost attack speed for placed champions
+        // We approximate by multiplying attackSpeed for the remainder of combat
+        for (const ally of this.state.champions) {
+          if (!ally.placed) continue;
+          ally.attackSpeed = ally.attackSpeed * (1 + mult);
+        }
+        break;
+      }
+
+      case 'chain_nova': {
+        const chainCount = ult.value ?? 6;
+        const dmg = ult.damage ?? champ.damage * 2;
+        const chainRange = 100;
+        const chainFrac = 0.85;
+
+        // Find first target (most progress in range)
+        let currentTarget: SimEnemy | null = null;
+        let bestProgress = -1;
+        for (const enemy of enemies) {
+          if (!enemy.alive) continue;
+          const pos = getPointAtDistance(this.path, enemy.distanceTraveled);
+          if (this.dist(champ.x, champ.y, pos.x, pos.y) <= champ.range && enemy.distanceTraveled > bestProgress) {
+            bestProgress = enemy.distanceTraveled;
+            currentTarget = enemy;
+          }
+        }
+        if (!currentTarget) break;
+
+        currentTarget.health -= dmg;
+        if (currentTarget.health <= 0) currentTarget.alive = false;
+        const hit = new Set<SimEnemy>([currentTarget]);
+        let currentDamage = dmg;
+
+        for (let i = 0; i < chainCount; i++) {
+          currentDamage = Math.round(currentDamage * chainFrac);
+          if (currentDamage < 1) break;
+
+          const currentPos = getPointAtDistance(this.path, currentTarget!.distanceTraveled);
+          let bestEnemy: SimEnemy | null = null;
+          let bestDist = Infinity;
+
+          for (const enemy of enemies) {
+            if (!enemy.alive || hit.has(enemy)) continue;
+            const pos = getPointAtDistance(this.path, enemy.distanceTraveled);
+            const d = this.dist(currentPos.x, currentPos.y, pos.x, pos.y);
+            if (d <= chainRange && d < bestDist) {
+              bestDist = d;
+              bestEnemy = enemy;
+            }
+          }
+
+          if (!bestEnemy) break;
+          bestEnemy.health -= currentDamage;
+          if (bestEnemy.health <= 0) bestEnemy.alive = false;
+          hit.add(bestEnemy);
+          currentTarget = bestEnemy;
+        }
+        break;
+      }
+
+      case 'snipe': {
+        let target: SimEnemy | null = null;
+        let bestProgress = -1;
+        for (const enemy of enemies) {
+          if (!enemy.alive) continue;
+          const pos = getPointAtDistance(this.path, enemy.distanceTraveled);
+          if (this.dist(champ.x, champ.y, pos.x, pos.y) <= champ.range && enemy.distanceTraveled > bestProgress) {
+            bestProgress = enemy.distanceTraveled;
+            target = enemy;
+          }
+        }
+        if (!target) break;
+        const dmg = ult.damage ?? champ.damage * 5;
+        target.health -= dmg;
+        if (target.health <= 0) target.alive = false;
+        break;
+      }
+
+      case 'gold_rush': {
+        let target: SimEnemy | null = null;
+        let bestProgress = -1;
+        for (const enemy of enemies) {
+          if (!enemy.alive) continue;
+          const pos = getPointAtDistance(this.path, enemy.distanceTraveled);
+          if (this.dist(champ.x, champ.y, pos.x, pos.y) <= champ.range && enemy.distanceTraveled > bestProgress) {
+            bestProgress = enemy.distanceTraveled;
+            target = enemy;
+          }
+        }
+        if (!target) break;
+        const dmg = ult.damage ?? 500;
+        const gold = ult.value ?? 3;
+        target.health -= dmg;
+        if (target.health <= 0) {
+          target.alive = false;
+          this.state.gold += gold;
+        }
+        break;
+      }
+
+      case 'heal_wave': {
+        const manaAmount = ult.value ?? 30;
+        for (const ally of this.state.champions) {
+          if (!ally.placed) continue;
+          ally.mana = Math.min(ally.manaMax, ally.mana + manaAmount);
+        }
+        // If this ult also has a duration, grant attack speed buff
+        if (ult.duration) {
+          for (const ally of this.state.champions) {
+            if (!ally.placed) continue;
+            ally.attackSpeed = ally.attackSpeed * (1 + 0.6);
+          }
+        }
+        break;
+      }
+    }
+  }
+
+  private dist(x1: number, y1: number, x2: number, y2: number): number {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    return Math.sqrt(dx * dx + dy * dy);
   }
 
   // --- Shopping phase ---

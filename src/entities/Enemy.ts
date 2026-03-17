@@ -22,6 +22,7 @@ export class Enemy {
   private dotTickTimer: number = 0;
   private dotDamagePerTick: number = 0;
   private dotTickInterval: number = 0;
+  private stunTimer: number = 0;
   private slowTint: Phaser.GameObjects.Sprite | null = null;
 
   private pathGraph: PathGraph;
@@ -59,6 +60,22 @@ export class Enemy {
     if (!this.alive) return;
 
     const dt = delta / 1000;
+
+    // Update stun effect (stunned = cannot move, takes no actions)
+    if (this.stunTimer > 0) {
+      this.stunTimer -= dt;
+      if (this.stunTimer <= 0) {
+        this.sprite.clearTint();
+        // Reapply slow tint if still slowed
+        if (this.slowTimer > 0) {
+          this.sprite.setTint(0x4488ff);
+        } else if (this.dotTimer > 0) {
+          this.sprite.setTint(0x44ff44);
+        }
+      }
+      this.updateHealthBar();
+      return; // Stunned: skip all movement and effects processing
+    }
 
     // Update slow effect
     if (this.slowTimer > 0) {
@@ -132,6 +149,12 @@ export class Enemy {
       this.dotTickTimer = this.dotTickInterval;
     }
     this.sprite.setTint(this.slowTimer > 0 ? 0x4488ff : 0x44ff44);
+  }
+
+  /** Apply a stun effect. Enemy cannot move or act for the duration. */
+  applyStun(duration: number): void {
+    this.stunTimer = Math.max(this.stunTimer, duration);
+    this.sprite.setTint(0xffff00);
   }
 
   private die(): void {

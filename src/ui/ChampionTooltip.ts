@@ -145,10 +145,10 @@ export class ChampionTooltip {
     const traitStr = champion.traits.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(' / ');
     this.traitsText.setText(traitStr);
 
-    // Base stats (no health)
+    // Base stats
     this.baseStatsText.setText(
       `DMG: ${champion.baseDamage}    Range: ${champion.baseRange}\n` +
-      `ATK Spd: ${champion.baseAttackSpeed.toFixed(2)}`
+      `ATK Spd: ${champion.baseAttackSpeed.toFixed(2)}    Mana: ${champion.manaMax}`
     );
 
     // Synergy bonuses (show effective stats if different from base)
@@ -170,12 +170,14 @@ export class ChampionTooltip {
       bonuses.push(...effects);
     }
 
-    if (bonuses.length > 0) {
-      this.bonusStatsText.setText('Synergy bonuses:\n' + bonuses.join('\n'));
-      this.bonusStatsText.setVisible(true);
-    } else {
-      this.bonusStatsText.setVisible(false);
-    }
+    // Ultimate info
+    const ult = champion.ultimate;
+    bonuses.push('');
+    bonuses.push(`ULT: ${ult.name} (${ult.manaCost} mana)`);
+    bonuses.push(`  ${ult.description}`);
+
+    this.bonusStatsText.setText(bonuses.join('\n'));
+    this.bonusStatsText.setVisible(true);
 
     // Items display
     this.itemsContainer.removeAll(true);

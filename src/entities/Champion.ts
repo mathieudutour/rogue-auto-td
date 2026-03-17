@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { GameScene } from '../scenes/GameScene';
-import { ChampionData } from '../data/champions';
+import { ChampionData, UltimateData } from '../data/champions';
 import { SynergyTier } from '../data/synergies';
 import {
   HeldItem, MAX_ITEMS_PER_CHAMPION,
@@ -9,22 +9,27 @@ import {
 } from '../data/items';
 import { STAR_2_MULTIPLIER, STAR_3_MULTIPLIER, COLORS } from '../utils/constants';
 
+/** Mana gained per attack (flat amount) */
+const MANA_PER_ATTACK = 10;
+/** Mana gained passively per second */
+const MANA_PER_SECOND = 3;
+
 export interface SynergyBonusState {
   damageMult: number;
   attackSpeedMult: number;
   rangeMult: number;
   // Effects granted by synergies
-  slowAmount: number;       // 0 = no slow, otherwise speed multiplier (0.7 = 30% slow)
+  slowAmount: number;
   slowDuration: number;
   burnOnHit: number;
   burnRadius: number;
   splashOnHit: boolean;
   splashRadius: number;
   splashFrac: number;
-  chainOnHit: number;       // 0 = no chain, otherwise bounce count
+  chainOnHit: number;
   chainRange: number;
   chainDamageFrac: number;
-  dotOnHit: number;         // 0 = no dot, otherwise damage per tick
+  dotOnHit: number;
   dotDuration: number;
   dotTickRate: number;
   critChance: number;
@@ -72,6 +77,16 @@ export class Champion {
   range: number;
   attackSpeed: number;
 
+  // Mana & Ultimate
+  mana: number = 0;
+  manaMax: number;
+  ultimate: UltimateData;
+  private manaBar: Phaser.GameObjects.Graphics | null = null;
+
+  // Temporary buff tracking
+  private attackSpeedBuff: number = 0; // additive multiplier from ally_boost ults
+  private attackSpeedBuffTimer: number = 0;
+
   // Synergy bonus tracking
   synergyBonuses: SynergyBonusState = defaultBonuses();
 
@@ -101,6 +116,8 @@ export class Champion {
     this.baseDamage = data.stats.damage;
     this.baseRange = data.stats.range;
     this.baseAttackSpeed = data.stats.attackSpeed;
+    this.manaMax = data.stats.manaMax;
+    this.ultimate = data.ultimate;
 
     this.damage = this.baseDamage;
     this.range = this.baseRange;
@@ -129,7 +146,7 @@ export class Champion {
     this.gridRow = row;
     this.placed = true;
 
-    this.sprite.setPosition(screenX, screenY - 8); // Slightly above tile center
+    this.sprite.setPosition(screenX, screenY - 8);
     this.sprite.setVisible(true);
     this.sprite.setDepth(screenY + 2);
 
@@ -139,6 +156,7 @@ export class Champion {
 
     this.attackCooldown = 0;
     this.updateItemDots();
+    this.updateManaBar();
   }
 
   removeFromBoard(): void {
@@ -148,6 +166,7 @@ export class Champion {
     this.sprite.setVisible(false);
     this.starIndicator.setVisible(false);
     if (this.itemDots) { this.itemDots.destroy(); this.itemDots = null; }
+    if (this.manaBar) { this.manaBar.destroy(); this.manaBar = null; }
     this.hideRange();
     this.target = null;
   }
@@ -168,19 +187,110 @@ export class Champion {
     }
   }
 
+  /** Reset mana at the start of each combat round */
+  resetCombatState(): void {
+    this.mana = 0;
+    this.attackSpeedBuff = 0;
+    this.attackSpeedBuffTimer = 0;
+  }
+
   update(delta: number): void {
     if (!this.placed) return;
 
-    this.attackCooldown -= delta / 1000;
+    const dt = delta / 1000;
 
+    // Update temporary buffs
+    if (this.attackSpeedBuffTimer > 0) {
+      this.attackSpeedBuffTimer -= dt;
+      if (this.attackSpeedBuffTimer <= 0) {
+        this.attackSpeedBuff = 0;
+        this.attackSpeedBuffTimer = 0;
+      }
+    }
+
+    // Passive mana generation
+    if (this.mana < this.manaMax) {
+      this.mana = Math.min(this.manaMax, this.mana + MANA_PER_SECOND * dt);
+    }
+
+    // Check for ultimate cast (mana full)
+    if (this.mana >= this.manaMax) {
+      this.target = this.findTarget();
+      if (this.target || this.isNonTargetedUltimate()) {
+        this.castUltimate();
+        this.mana = 0;
+      }
+    }
+
+    // Normal attacks
+    this.attackCooldown -= dt;
     if (this.attackCooldown <= 0) {
-      // Find target
       this.target = this.findTarget();
       if (this.target) {
         this.attack(this.target);
-        this.attackCooldown = 1 / this.attackSpeed;
+        // Mana on attack
+        this.mana = Math.min(this.manaMax, this.mana + MANA_PER_ATTACK);
+        const effectiveAS = this.attackSpeed * (1 + this.attackSpeedBuff);
+        this.attackCooldown = 1 / effectiveAS;
       }
     }
+
+    this.updateManaBar();
+  }
+
+  private isNonTargetedUltimate(): boolean {
+    return this.ultimate.type === 'ally_boost' || this.ultimate.type === 'heal_wave';
+  }
+
+  private castUltimate(): void {
+    this.scene.combatSystem.castUltimate(this);
+    this.showUltimateCastEffect();
+  }
+
+  private showUltimateCastEffect(): void {
+    // Flash the champion
+    const flash = this.scene.add.circle(this.sprite.x, this.sprite.y, 16, 0x44ccff, 0.6);
+    flash.setDepth(this.sprite.depth + 1);
+    this.scene.tweens.add({
+      targets: flash,
+      alpha: 0,
+      scaleX: 2.5,
+      scaleY: 2.5,
+      duration: 400,
+      onComplete: () => flash.destroy(),
+    });
+
+    // Show ultimate name
+    const text = this.scene.add.text(this.sprite.x, this.sprite.y - 28, this.ultimate.name, {
+      fontSize: '10px',
+      color: '#44ccff',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 2,
+    });
+    text.setOrigin(0.5, 1).setDepth(10000);
+    this.scene.tweens.add({
+      targets: text,
+      y: this.sprite.y - 48,
+      alpha: 0,
+      duration: 800,
+      onComplete: () => text.destroy(),
+    });
+  }
+
+  /** Apply a temporary attack speed buff (from ally_boost ultimates) */
+  applyAttackSpeedBuff(multiplier: number, duration: number): void {
+    // Take the strongest buff
+    if (multiplier > this.attackSpeedBuff) {
+      this.attackSpeedBuff = multiplier;
+    }
+    this.attackSpeedBuffTimer = Math.max(this.attackSpeedBuffTimer, duration);
+  }
+
+  /** Add mana from external source (heal_wave ultimate) */
+  addMana(amount: number): void {
+    this.mana = Math.min(this.manaMax, this.mana + amount);
   }
 
   private findTarget(): import('../entities/Enemy').Enemy | null {
@@ -208,6 +318,34 @@ export class Champion {
 
   private attack(target: import('../entities/Enemy').Enemy): void {
     this.scene.combatSystem.fireProjectile(this, target);
+  }
+
+  // ── Mana bar rendering ─────────────────────────────
+
+  private updateManaBar(): void {
+    if (!this.placed) return;
+
+    if (!this.manaBar) {
+      this.manaBar = this.scene.add.graphics();
+    }
+    this.manaBar.clear();
+
+    const barWidth = 20;
+    const barHeight = 3;
+    const x = this.sprite.x - barWidth / 2;
+    const y = this.sprite.y + 8;
+
+    // Background
+    this.manaBar.fillStyle(0x111133, 0.8);
+    this.manaBar.fillRect(x, y, barWidth, barHeight);
+
+    // Mana fill
+    const manaPercent = this.mana / this.manaMax;
+    const color = manaPercent >= 1.0 ? 0x44ccff : 0x2266aa;
+    this.manaBar.fillStyle(color, 1);
+    this.manaBar.fillRect(x, y, barWidth * manaPercent, barHeight);
+
+    this.manaBar.setDepth(this.sprite.depth + 1);
   }
 
   // ── Item management ──────────────────────────────────
@@ -291,7 +429,7 @@ export class Champion {
     const gap = 2;
     const totalW = this.items.length * (dotSize * 2 + gap) - gap;
     const startX = this.sprite.x - totalW / 2;
-    const y = this.sprite.y + 12;
+    const y = this.sprite.y + 14;
 
     for (let i = 0; i < this.items.length; i++) {
       const color = getHeldItemColor(this.items[i]);
@@ -348,14 +486,10 @@ export class Champion {
   }
 
   applySynergyBonus(bonuses: SynergyTier['bonuses']): void {
-    // Multiplicative stat bonuses (stack multiplicatively)
     if (bonuses.damageMult) this.synergyBonuses.damageMult *= bonuses.damageMult;
     if (bonuses.attackSpeedMult) this.synergyBonuses.attackSpeedMult *= bonuses.attackSpeedMult;
     if (bonuses.rangeMult) this.synergyBonuses.rangeMult *= bonuses.rangeMult;
-
-    // Effects: take the strongest from any source
     if (bonuses.slowAmount) {
-      // Lower slowAmount = stronger slow, so take the minimum
       if (this.synergyBonuses.slowAmount === 0 || bonuses.slowAmount < this.synergyBonuses.slowAmount) {
         this.synergyBonuses.slowAmount = bonuses.slowAmount;
       }
@@ -391,6 +525,7 @@ export class Champion {
     this.sprite.destroy();
     this.starIndicator.destroy();
     if (this.itemDots) { this.itemDots.destroy(); this.itemDots = null; }
+    if (this.manaBar) { this.manaBar.destroy(); this.manaBar = null; }
     this.hideRange();
   }
 }

@@ -196,6 +196,11 @@ export class GameScene extends Phaser.Scene {
     this.phase = 'combat';
     this.livesAtWaveStart = this.lives;
 
+    // Reset mana and buffs for all champions
+    for (const champion of this.champions) {
+      champion.resetCombatState();
+    }
+
     // Apply synergies
     this.synergyManager.calculateSynergies();
 
