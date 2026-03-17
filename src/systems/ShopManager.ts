@@ -61,15 +61,17 @@ export class ShopManager {
       }
     }
 
-    // Filter pool to that cost tier with remaining copies
+    // Filter pool to that cost tier with remaining copies, excluding 3-star owned
+    const maxedIds = this.getMaxStarChampionIds();
     const available = this.pool.filter(p => {
       if (p.remaining <= 0) return false;
+      if (maxedIds.has(p.championId)) return false;
       const data = getChampionById(p.championId);
       return data && data.cost === costTier;
     });
 
-    // Fallback: if no champions of that tier, try any available
-    const fallbackPool = available.length > 0 ? available : this.pool.filter(p => p.remaining > 0);
+    // Fallback: if no champions of that tier, try any available (still excluding 3-star)
+    const fallbackPool = available.length > 0 ? available : this.pool.filter(p => p.remaining > 0 && !maxedIds.has(p.championId));
     if (fallbackPool.length === 0) return null;
 
     const totalWeight = fallbackPool.reduce((sum, p) => sum + p.remaining, 0);
@@ -167,6 +169,18 @@ export class ShopManager {
     if (twoStars.length >= 3) {
       this.mergeChampions(twoStars.slice(0, 3));
     }
+  }
+
+  /** Get IDs of champions the player owns at 3-star. */
+  private getMaxStarChampionIds(): Set<string> {
+    const ids = new Set<string>();
+    for (const champ of this.scene.bench) {
+      if (champ && champ.starLevel >= 3) ids.add(champ.championId);
+    }
+    for (const champ of this.scene.champions) {
+      if (champ.starLevel >= 3) ids.add(champ.championId);
+    }
+    return ids;
   }
 
   private getAllChampionsOfId(id: string, starLevel: number): Champion[] {
