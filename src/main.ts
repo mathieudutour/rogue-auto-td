@@ -10,13 +10,34 @@ const config: Phaser.Types.Core.GameConfig = {
   height: window.innerHeight,
   backgroundColor: '#1a1a2e',
   scene: [BootScene, GameScene, UIScene],
+  autoRound: true,
   scale: {
     mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
+  render: {
+    roundPixels: true,
+  },
   input: {
     mouse: {
       preventDefaultWheel: true,
+    },
+  },
+  callbacks: {
+    postBoot: (game) => {
+      // Render text at native device resolution for crisp text on HiDPI displays
+      const dpr = window.devicePixelRatio || 1;
+      if (dpr > 1) {
+        const origAddText = Phaser.GameObjects.GameObjectFactory.prototype.text;
+        Phaser.GameObjects.GameObjectFactory.prototype.text = function (
+          this: Phaser.GameObjects.GameObjectFactory,
+          x: number, y: number, text: string | string[], style?: Phaser.Types.GameObjects.Text.TextStyle,
+        ) {
+          const t = origAddText.call(this, x, y, text, style);
+          t.setResolution(dpr);
+          return t;
+        };
+      }
     },
   },
 };
