@@ -133,6 +133,9 @@ export class GameScene extends Phaser.Scene {
       const income = this.economyManager.awardWaveIncome();
       this.economyManager.addXp(2); // passive XP per wave
       this.events.emit('incomeBreakdown', income);
+
+      // Generate a new map and randomly place champions
+      this.regenerateMap();
     }
 
     // Item drops: guaranteed component on waves 1,2,3, then every 3rd wave
@@ -151,6 +154,42 @@ export class GameScene extends Phaser.Scene {
     this.events.emit('phaseChanged', this.phase);
     this.events.emit('waveChanged', this.waveNumber);
     this.events.emit('levelChanged', this.economyManager.level, this.economyManager.xp, this.economyManager.getXpToNextLevel(), this.economyManager.getMaxBoardSize());
+  }
+
+  /** Generate a new map layout and randomly place all board champions on it. */
+  private regenerateMap(): void {
+    // Generate new map data
+    this.mapData = generateMap();
+
+    // Rebuild visual tiles and path graph
+    this.isoMap.rebuild(this.mapData);
+    this.pathGraph = new PathGraph(this.mapData.pathWaypoints);
+
+    // Collect all placed champions and unplace them
+    const placedChampions = this.champions.filter(c => c.placed);
+    for (const champ of placedChampions) {
+      champ.removeFromBoard();
+    }
+
+    // Randomly place them on the new map
+    const placeableTiles = this.isoMap.getPlaceableTiles();
+    // Shuffle using Fisher-Yates
+    for (let i = placeableTiles.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [placeableTiles[i], placeableTiles[j]] = [placeableTiles[j], placeableTiles[i]];
+    }
+
+    let tileIdx = 0;
+    for (const champ of placedChampions) {
+      if (tileIdx >= placeableTiles.length) break;
+      const tile = placeableTiles[tileIdx++];
+      const { x, y } = tileToScreen(tile.col, tile.row);
+      champ.place(tile.col, tile.row, x, y);
+      this.isoMap.setOccupied(tile.col, tile.row, true);
+    }
+
+    this.synergyManager.calculateSynergies();
+    this.events.emit('championsChanged');
   }
 
   startCombatPhase(): void {

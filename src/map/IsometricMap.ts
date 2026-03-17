@@ -194,4 +194,39 @@ export class IsometricMap {
     this.clearDragOverlayImage();
     this.dragHighlightTile = null;
   }
+
+  /** Rebuild the map with new data (destroys old tiles, creates new ones). */
+  rebuild(mapData: MapData): void {
+    // Destroy existing tile images
+    for (const row of this.tiles) {
+      for (const tile of row) {
+        tile.image.destroy();
+      }
+    }
+    this.tiles = [];
+
+    // Clear overlays
+    this.clearHoverOverlay();
+    this.clearSelectedOverlay();
+    this.clearDragOverlayImage();
+    this.hoverTile = null;
+    this.selectedTile = null;
+    this.dragHighlightTile = null;
+
+    this.mapData = mapData;
+    this.buildMap();
+  }
+
+  /** Get all placeable tile positions. */
+  getPlaceableTiles(): { col: number; row: number }[] {
+    const result: { col: number; row: number }[] = [];
+    for (let row = 0; row < this.tiles.length; row++) {
+      for (let col = 0; col < this.tiles[row].length; col++) {
+        if (this.tiles[row][col].type === TileType.Placeable) {
+          result.push({ col, row });
+        }
+      }
+    }
+    return result;
+  }
 }
