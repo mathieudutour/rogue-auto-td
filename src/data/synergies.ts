@@ -5,7 +5,6 @@ export interface SynergyTier {
     damageMult?: number;     // multiplicative bonus to damage
     attackSpeedMult?: number; // multiplicative bonus to attack speed
     rangeMult?: number;       // multiplicative bonus to range
-    armor?: number;           // flat damage reduction
     // Game-changing max-tier effects
     critChance?: number;      // chance (0-1) to deal critical hit
     critMult?: number;        // critical damage multiplier
@@ -50,14 +49,14 @@ export const SYNERGIES: SynergyData[] = [
   {
     id: 'ice',
     name: 'Ice',
-    description: 'Ice champions gain range. Max: attacks can freeze enemies solid',
+    description: 'Ice champions gain range and slow enemies. Max: freeze enemies solid',
     tiers: [
-      { count: 2, description: '+20% range', bonuses: { rangeMult: 1.2 } },
-      { count: 4, description: '+40% range, +15% AS', bonuses: { rangeMult: 1.4, attackSpeedMult: 1.15 } },
+      { count: 2, description: '+25% range, +10% AS', bonuses: { rangeMult: 1.25, attackSpeedMult: 1.1 } },
+      { count: 4, description: '+45% range, +20% AS', bonuses: { rangeMult: 1.45, attackSpeedMult: 1.2 } },
       {
         count: 6,
-        description: 'PERMAFROST: +50% range, 30% chance to freeze enemies for 1.2s',
-        bonuses: { rangeMult: 1.5, attackSpeedMult: 1.2, freezeChance: 0.3, freezeDuration: 1.2 },
+        description: 'PERMAFROST: +55% range, +30% AS, 35% chance to freeze for 1.5s',
+        bonuses: { rangeMult: 1.55, attackSpeedMult: 1.3, freezeChance: 0.35, freezeDuration: 1.5 },
       },
     ],
   },
@@ -94,11 +93,11 @@ export const SYNERGIES: SynergyData[] = [
     name: 'Arcane',
     description: 'Arcane champions gain damage and range. Max: buff ALL allies',
     tiers: [
-      { count: 2, description: '+15% damage, +15% range', bonuses: { damageMult: 1.15, rangeMult: 1.15 } },
+      { count: 2, description: '+20% damage, +20% range', bonuses: { damageMult: 1.2, rangeMult: 1.2 } },
       {
         count: 4,
-        description: 'ARCANUM: +35% dmg, +30% range to ALL allies',
-        bonuses: { damageMult: 1.35, rangeMult: 1.3, allAllies: true },
+        description: 'ARCANUM: +40% dmg, +35% range, +15% AS to ALL allies',
+        bonuses: { damageMult: 1.4, rangeMult: 1.35, attackSpeedMult: 1.15, allAllies: true },
       },
     ],
   },
@@ -107,14 +106,14 @@ export const SYNERGIES: SynergyData[] = [
   {
     id: 'warrior',
     name: 'Warrior',
-    description: 'Warriors are tougher. Max: reflect damage back to attackers',
+    description: 'Warriors deal more damage. Max: reflect damage back to attackers',
     tiers: [
-      { count: 2, description: '5 armor', bonuses: { armor: 5 } },
-      { count: 4, description: '15 armor, +25% damage', bonuses: { armor: 15, damageMult: 1.25 } },
+      { count: 2, description: '+20% damage', bonuses: { damageMult: 1.2 } },
+      { count: 4, description: '+45% damage, +15% AS', bonuses: { damageMult: 1.45, attackSpeedMult: 1.15 } },
       {
         count: 6,
-        description: 'BULWARK: 30 armor, +50% dmg, reflect 25% damage',
-        bonuses: { armor: 30, damageMult: 1.5, damageReflect: 0.25 },
+        description: 'BULWARK: +70% dmg, +25% AS, reflect 25% damage',
+        bonuses: { damageMult: 1.7, attackSpeedMult: 1.25, damageReflect: 0.25 },
       },
     ],
   },
@@ -151,25 +150,25 @@ export const SYNERGIES: SynergyData[] = [
     name: 'Assassin',
     description: 'Assassins attack faster. Max: gain devastating critical strikes',
     tiers: [
-      { count: 2, description: '+30% attack speed', bonuses: { attackSpeedMult: 1.3 } },
-      { count: 4, description: '+65% AS, +20% damage', bonuses: { attackSpeedMult: 1.65, damageMult: 1.2 } },
+      { count: 2, description: '+20% attack speed', bonuses: { attackSpeedMult: 1.2 } },
+      { count: 4, description: '+45% AS, +15% damage', bonuses: { attackSpeedMult: 1.45, damageMult: 1.15 } },
       {
         count: 6,
-        description: 'LETHALITY: +80% AS, +30% dmg, 40% chance for 3x crit',
-        bonuses: { attackSpeedMult: 1.8, damageMult: 1.3, critChance: 0.4, critMult: 3.0 },
+        description: 'LETHALITY: +60% AS, +25% dmg, 30% chance for 2.5x crit',
+        bonuses: { attackSpeedMult: 1.6, damageMult: 1.25, critChance: 0.30, critMult: 2.5 },
       },
     ],
   },
   {
     id: 'guardian',
     name: 'Guardian',
-    description: 'Guardians bolster defenses. Max: shield ALL allies',
+    description: 'Guardians boost range and support allies. Max: buff ALL allies',
     tiers: [
-      { count: 2, description: '8 armor, +10% range', bonuses: { armor: 8, rangeMult: 1.1 } },
+      { count: 2, description: '+20% range, +15% damage, +10% AS', bonuses: { rangeMult: 1.2, damageMult: 1.15, attackSpeedMult: 1.1 } },
       {
         count: 4,
-        description: 'BASTION: 15 armor, +20% range, +15% dmg to ALL allies',
-        bonuses: { armor: 15, rangeMult: 1.2, damageMult: 1.15, allAllies: true },
+        description: 'BASTION: +35% range, +35% dmg, +25% AS to ALL allies',
+        bonuses: { rangeMult: 1.35, damageMult: 1.35, attackSpeedMult: 1.25, allAllies: true },
       },
     ],
   },

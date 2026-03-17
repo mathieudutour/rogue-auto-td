@@ -13,7 +13,6 @@ export interface SynergyBonusState {
   damageMult: number;
   attackSpeedMult: number;
   rangeMult: number;
-  armor: number;
   // Special effects from max-tier synergies
   critChance: number;
   critMult: number;
@@ -32,7 +31,7 @@ export interface SynergyBonusState {
 
 function defaultBonuses(): SynergyBonusState {
   return {
-    damageMult: 1, attackSpeedMult: 1, rangeMult: 1, armor: 0,
+    damageMult: 1, attackSpeedMult: 1, rangeMult: 1,
     critChance: 0, critMult: 1, multishot: 0, executeThreshold: 0,
     burnOnHit: 0, burnRadius: 0, freezeChance: 0, freezeDuration: 0,
     splashOnHit: false, splashRadius: 0, splashFrac: 0,
@@ -258,7 +257,7 @@ export class Champion {
   /** Aggregate item stats */
   private getItemBonuses() {
     const result = {
-      flatDamage: 0, flatRange: 0, flatAttackSpeed: 0, flatArmor: 0,
+      flatDamage: 0, flatRange: 0, flatAttackSpeed: 0,
       damageMult: 1 as number,
       critChance: 0 as number, critMult: 1 as number,
       splashFrac: 0 as number, splashRadius: 0 as number, splashOnHit: false,
@@ -271,7 +270,6 @@ export class Champion {
       if (s.damage) result.flatDamage += s.damage;
       if (s.range) result.flatRange += s.range;
       if (s.attackSpeed) result.flatAttackSpeed += s.attackSpeed;
-      if (s.armor) result.flatArmor += s.armor;
       if (s.damageMult) result.damageMult *= (1 + s.damageMult);
       if (s.critChance) result.critChance = Math.min(1, result.critChance + s.critChance);
       if (s.critMult && s.critMult > result.critMult) result.critMult = s.critMult;
@@ -342,7 +340,6 @@ export class Champion {
     this.attackSpeed = (this.baseAttackSpeed + ib.flatAttackSpeed) * this.synergyBonuses.attackSpeedMult;
 
     // Merge item effects into synergyBonuses so the combat system picks them up
-    this.synergyBonuses.armor += ib.flatArmor;
     if (ib.critChance > 0) this.synergyBonuses.critChance = Math.min(1, this.synergyBonuses.critChance + ib.critChance);
     if (ib.critMult > this.synergyBonuses.critMult) this.synergyBonuses.critMult = ib.critMult;
     if (ib.splashOnHit) {
@@ -366,7 +363,6 @@ export class Champion {
     if (bonuses.damageMult) this.synergyBonuses.damageMult *= bonuses.damageMult;
     if (bonuses.attackSpeedMult) this.synergyBonuses.attackSpeedMult *= bonuses.attackSpeedMult;
     if (bonuses.rangeMult) this.synergyBonuses.rangeMult *= bonuses.rangeMult;
-    if (bonuses.armor) this.synergyBonuses.armor += bonuses.armor;
     // Special effects (take the highest value if multiple sources)
     if (bonuses.critChance) this.synergyBonuses.critChance = Math.max(this.synergyBonuses.critChance, bonuses.critChance);
     if (bonuses.critMult) this.synergyBonuses.critMult = Math.max(this.synergyBonuses.critMult, bonuses.critMult);

@@ -10,8 +10,6 @@ export interface ItemStats {
   damage?: number;          // flat bonus damage
   attackSpeed?: number;     // flat bonus attacks/sec
   range?: number;           // flat bonus range
-  armor?: number;           // flat damage reduction
-  health?: number;          // flat bonus HP (unused in towers, but thematic)
   critChance?: number;      // 0-1
   critMult?: number;        // multiplier on crit
   splashFrac?: number;      // fraction of damage dealt as splash
@@ -21,7 +19,6 @@ export interface ItemStats {
   burnDamage?: number;      // DoT damage per tick on hit
   burnDuration?: number;    // DoT duration
   bonusGoldOnKill?: number; // extra gold per kill
-  lifesteal?: number;       // fraction of damage healed (visual only for towers)
   damageMult?: number;      // multiplicative damage bonus
 }
 
@@ -62,9 +59,9 @@ export const COMPONENTS: ComponentData[] = [
   {
     id: 'chain_vest',
     name: 'Chain Vest',
-    description: '+10 armor',
+    description: '+5 damage, +10 range',
     color: 0xccaa44,
-    stats: { armor: 10 },
+    stats: { damage: 5, range: 10 },
   },
   {
     id: 'negatron_cloak',
@@ -90,9 +87,9 @@ export const COMPONENTS: ComponentData[] = [
   {
     id: 'giants_belt',
     name: "Giant's Belt",
-    description: '+5 armor, +5 damage',
+    description: '+8 damage',
     color: 0xcc6622,
-    stats: { armor: 5, damage: 5 },
+    stats: { damage: 8 },
   },
   {
     id: 'sparring_gloves',
@@ -186,26 +183,26 @@ export const COMBINED_ITEMS: CombinedItemData[] = [
   {
     id: 'bramble_vest',
     name: 'Bramble Vest',
-    description: '+25 armor, 20% splash in 40px',
+    description: '+15 dmg, 20% splash in 40px',
     recipe: ['chain_vest', 'chain_vest'],
     color: 0xbbaa22,
-    stats: { armor: 25, splashFrac: 0.20, splashRadius: 40 },
+    stats: { damage: 15, splashFrac: 0.20, splashRadius: 40 },
   },
   {
     id: 'frozen_heart',
     name: 'Frozen Heart',
-    description: '+15 armor, slow 40% for 1.5s',
+    description: '+10 dmg, slow 40% for 1.5s',
     recipe: ['chain_vest', 'tear'],
     color: 0x4488bb,
-    stats: { armor: 15, slowAmount: 0.6, slowDuration: 1.5 },
+    stats: { damage: 10, slowAmount: 0.6, slowDuration: 1.5 },
   },
   {
     id: 'gargoyle_stoneplate',
     name: 'Gargoyle Plate',
-    description: '+20 armor, +15 range',
+    description: '+10 dmg, +30 range',
     recipe: ['chain_vest', 'negatron_cloak'],
     color: 0x888899,
-    stats: { armor: 20, range: 15 },
+    stats: { damage: 10, range: 30 },
   },
 
   // Negatron combinations
@@ -257,27 +254,27 @@ export const COMBINED_ITEMS: CombinedItemData[] = [
   // Giant's Belt combinations
   {
     id: 'warmogs',
-    name: "Warmog's Armor",
-    description: '+15 armor, +10 damage',
+    name: "Warmog's Might",
+    description: '+20 damage, +10% AS',
     recipe: ['giants_belt', 'giants_belt'],
     color: 0xcc4400,
-    stats: { armor: 15, damage: 10 },
+    stats: { damage: 20, attackSpeed: 0.10 },
   },
   {
     id: 'zekes_herald',
     name: "Zeke's Herald",
-    description: '+10 dmg, +15% AS, +5 armor',
+    description: '+12 dmg, +20% AS',
     recipe: ['giants_belt', 'recurve_bow'],
     color: 0xcc8844,
-    stats: { damage: 10, attackSpeed: 0.15, armor: 5 },
+    stats: { damage: 12, attackSpeed: 0.20 },
   },
   {
     id: 'sunfire_cape',
     name: 'Sunfire Cape',
-    description: '+10 armor, burn 10/tick in 60px',
+    description: '+10 dmg, burn 10/tick in 60px',
     recipe: ['giants_belt', 'chain_vest'],
     color: 0xff6600,
-    stats: { armor: 10, burnDamage: 10, burnDuration: 2.5 },
+    stats: { damage: 10, burnDamage: 10, burnDuration: 2.5 },
   },
 
   // Sparring Gloves combinations

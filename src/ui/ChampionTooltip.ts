@@ -165,9 +165,6 @@ export class ChampionTooltip {
     if (Math.abs(champion.attackSpeed - champion.baseAttackSpeed) > 0.01) {
       bonuses.push(`ATK Spd: ${champion.baseAttackSpeed.toFixed(2)} \u2192 ${champion.attackSpeed.toFixed(2)}`);
     }
-    if (champion.synergyBonuses.armor > 0) {
-      bonuses.push(`Armor: +${champion.synergyBonuses.armor}`);
-    }
     if (bonuses.length > 0) {
       this.bonusStatsText.setText('Synergy bonuses:\n' + bonuses.join('\n'));
       this.bonusStatsText.setVisible(true);

@@ -32,7 +32,7 @@ export class Projectile {
     this.attackType = attackType;
     this.params = params;
     this.synergy = synergy || {
-      damageMult: 1, attackSpeedMult: 1, rangeMult: 1, armor: 0,
+      damageMult: 1, attackSpeedMult: 1, rangeMult: 1,
       critChance: 0, critMult: 1, multishot: 0, executeThreshold: 0,
       burnOnHit: 0, burnRadius: 0, freezeChance: 0, freezeDuration: 0,
       splashOnHit: false, splashRadius: 0, splashFrac: 0,

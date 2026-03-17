@@ -6,11 +6,18 @@
  */
 
 import { SimEngine, SimResult } from './SimEngine';
-import { SmartAI, GreedyAI, EconAI } from './AIStrategy';
+import { SmartAI, GreedyAI, EconAI, SynergyAI, getAllTraits } from './AIStrategy';
 import type { AIStrategy } from './SimEngine';
 import { generateMap } from '../map/MapGenerator';
 
-function runBatch(strategyName: string, createStrategy: () => AIStrategy, numGames: number): void {
+interface BatchResult {
+  name: string;
+  results: SimResult[];
+  avgWaves: number;
+  medianWaves: number;
+}
+
+function runBatch(strategyName: string, createStrategy: () => AIStrategy, numGames: number): BatchResult {
   const results: SimResult[] = [];
 
   for (let i = 0; i < numGames; i++) {
@@ -20,72 +27,36 @@ function runBatch(strategyName: string, createStrategy: () => AIStrategy, numGam
     results.push(engine.runGame(strategy));
   }
 
-  // Compute statistics
   const waves = results.map(r => r.wavesCompleted);
   const avgWaves = waves.reduce((a, b) => a + b, 0) / waves.length;
+  const sorted = [...waves].sort((a, b) => a - b);
+  const medianWaves = sorted[Math.floor(sorted.length / 2)];
+
+  return { name: strategyName, results, avgWaves, medianWaves };
+}
+
+function printBatch(batch: BatchResult, numGames: number): void {
+  const { name, results, avgWaves, medianWaves } = batch;
+  const waves = results.map(r => r.wavesCompleted);
   const minWaves = Math.min(...waves);
   const maxWaves = Math.max(...waves);
-  const medianWaves = waves.sort((a, b) => a - b)[Math.floor(waves.length / 2)];
-
-  const survivalByWave: Record<number, number> = {};
-  for (let w = 1; w <= maxWaves; w++) {
-    survivalByWave[w] = results.filter(r => r.wavesCompleted >= w).length;
-  }
 
   const levels = results.map(r => r.finalLevel);
   const avgLevel = levels.reduce((a, b) => a + b, 0) / levels.length;
 
-  const lostAllLives = results.filter(r => r.livesRemaining <= 0).length;
-  const survived20 = results.filter(r => r.wavesCompleted >= 20).length;
-  const survived30 = results.filter(r => r.wavesCompleted >= 30).length;
+  console.log(`\n${'─'.repeat(60)}`);
+  console.log(`Strategy: ${name} (${numGames} games)`);
+  console.log(`${'─'.repeat(60)}`);
+  console.log(`  Avg waves: ${avgWaves.toFixed(1)}  |  Median: ${medianWaves}  |  Range: ${minWaves}-${maxWaves}  |  StdDev: ${stdDev(waves).toFixed(1)}`);
+  console.log(`  Avg level: ${avgLevel.toFixed(1)}`);
 
-  console.log(`\n${'='.repeat(60)}`);
-  console.log(`Strategy: ${strategyName} (${numGames} games)`);
-  console.log(`${'='.repeat(60)}`);
-  console.log(`Waves survived:`);
-  console.log(`  Average: ${avgWaves.toFixed(1)}`);
-  console.log(`  Median:  ${medianWaves}`);
-  console.log(`  Min:     ${minWaves}`);
-  console.log(`  Max:     ${maxWaves}`);
-  console.log(`  Std Dev: ${stdDev(waves).toFixed(1)}`);
-  console.log(`\nFinal level: ${avgLevel.toFixed(1)} avg`);
-  console.log(`\nSurvival rates:`);
-  console.log(`  Reached wave 10: ${pct(results.filter(r => r.wavesCompleted >= 10).length, numGames)}`);
-  console.log(`  Reached wave 15: ${pct(results.filter(r => r.wavesCompleted >= 15).length, numGames)}`);
-  console.log(`  Reached wave 20: ${pct(survived20, numGames)}`);
-  console.log(`  Reached wave 25: ${pct(results.filter(r => r.wavesCompleted >= 25).length, numGames)}`);
-  console.log(`  Reached wave 30: ${pct(survived30, numGames)}`);
-
-  // Wave-by-wave survival curve (every 5 waves)
-  console.log(`\nSurvival curve:`);
-  for (let w = 5; w <= maxWaves; w += 5) {
-    const alive = survivalByWave[w] || 0;
-    const bar = '█'.repeat(Math.round(alive / numGames * 40));
-    console.log(`  Wave ${String(w).padStart(2)}: ${bar} ${pct(alive, numGames)}`);
-  }
-
-  // Distribution of death waves
-  console.log(`\nDeath wave distribution:`);
-  const buckets = [
-    { label: 'Wave 1-5', min: 1, max: 5 },
-    { label: 'Wave 6-10', min: 6, max: 10 },
-    { label: 'Wave 11-15', min: 11, max: 15 },
-    { label: 'Wave 16-20', min: 16, max: 20 },
-    { label: 'Wave 21-25', min: 21, max: 25 },
-    { label: 'Wave 26-30', min: 26, max: 30 },
-    { label: 'Wave 31+', min: 31, max: 999 },
-  ];
-  for (const bucket of buckets) {
-    const count = results.filter(r => r.wavesCompleted >= bucket.min && r.wavesCompleted <= bucket.max).length;
-    if (count > 0) {
-      const bar = '█'.repeat(Math.round(count / numGames * 40));
-      console.log(`  ${bucket.label.padEnd(12)}: ${bar} ${pct(count, numGames)}`);
-    }
-  }
-}
-
-function pct(count: number, total: number): string {
-  return `${count}/${total} (${(count / total * 100).toFixed(1)}%)`;
+  // Survival rates
+  const milestones = [10, 15, 20, 25, 30];
+  const survStr = milestones.map(w => {
+    const count = results.filter(r => r.wavesCompleted >= w).length;
+    return `W${w}: ${(count / numGames * 100).toFixed(0)}%`;
+  }).join('  ');
+  console.log(`  Survival:  ${survStr}`);
 }
 
 function stdDev(arr: number[]): number {
@@ -100,23 +71,66 @@ const numGames = parseInt(process.argv[2] || '200', 10);
 
 console.log(`Running ${numGames} simulations per strategy...\n`);
 
-runBatch('Greedy (casual player)', () => new GreedyAI(), numGames);
-runBatch('Smart (skilled player)', () => new SmartAI(), numGames);
-runBatch('Econ (economy-focused)', () => new EconAI(), numGames);
+// Run baseline strategies
+const baselines: BatchResult[] = [];
+baselines.push(runBatch('Greedy (casual)', () => new GreedyAI(), numGames));
+baselines.push(runBatch('Smart (skilled)', () => new SmartAI(), numGames));
+baselines.push(runBatch('Econ (economy)', () => new EconAI(), numGames));
+
+// Run per-synergy strategies
+const synergyResults: BatchResult[] = [];
+const traits = getAllTraits();
+for (const trait of traits) {
+  const name = trait.charAt(0).toUpperCase() + trait.slice(1);
+  synergyResults.push(runBatch(`${name} synergy`, () => new SynergyAI(trait), numGames));
+}
+
+// Print results
+console.log(`\n${'='.repeat(60)}`);
+console.log('BASELINE STRATEGIES');
+console.log(`${'='.repeat(60)}`);
+for (const batch of baselines) {
+  printBatch(batch, numGames);
+}
 
 console.log(`\n${'='.repeat(60)}`);
-console.log('BALANCE ANALYSIS');
+console.log('PER-SYNERGY STRATEGIES');
 console.log(`${'='.repeat(60)}`);
+for (const batch of synergyResults) {
+  printBatch(batch, numGames);
+}
+
+// Balance summary
+console.log(`\n${'='.repeat(60)}`);
+console.log('BALANCE SUMMARY');
+console.log(`${'='.repeat(60)}`);
+
+// Sort synergies by average waves
+const sorted = [...synergyResults].sort((a, b) => b.avgWaves - a.avgWaves);
+console.log('\nSynergy ranking (avg waves survived):');
+for (const batch of sorted) {
+  const bar = '█'.repeat(Math.round(batch.avgWaves));
+  const diff = batch.avgWaves - sorted[sorted.length - 1].avgWaves;
+  const diffStr = diff > 3 ? ` (+${diff.toFixed(1)} vs worst)` : '';
+  console.log(`  ${batch.name.padEnd(20)} ${bar} ${batch.avgWaves.toFixed(1)}${diffStr}`);
+}
+
+const best = sorted[0];
+const worst = sorted[sorted.length - 1];
+const spread = best.avgWaves - worst.avgWaves;
+console.log(`\nSpread: ${spread.toFixed(1)} waves (${best.name} vs ${worst.name})`);
+if (spread > 5) {
+  console.log(`⚠ Spread is >5 waves — consider buffing ${worst.name} or nerfing ${best.name}`);
+} else if (spread < 2) {
+  console.log(`✓ Synergies are well balanced (spread < 2 waves)`);
+} else {
+  console.log(`~ Synergies are reasonably balanced (spread 2-5 waves)`);
+}
+
 console.log(`
 Target difficulty:
-  - Casual players (Greedy): should lose around wave 8-12
-  - Skilled players (Smart): should lose around wave 15-25
-  - Expert players (Econ): should lose around wave 20-30
-
-If the above targets are not met, consider adjusting:
-  - Wave health scaling (currently +15% per wave)
-  - Enemy counts per wave
-  - Enemy base stats (HP, speed)
-  - Champion damage/range/attack speed
-  - Gold income or interest rates
+  - Casual (Greedy): wave 8-12
+  - Skilled (Smart): wave 15-25
+  - Economy (Econ): wave 20-30
+  - Per-synergy: all should be within ~3 waves of each other
 `);

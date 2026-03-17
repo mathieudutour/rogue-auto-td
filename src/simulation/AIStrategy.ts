@@ -1,95 +1,101 @@
 /**
  * AI strategies for the simulation.
- * Each strategy represents a different skill level of player.
+ * Each strategy represents a different approach to building a team.
  */
 
 import { SimEngine, ShopOffer, AIStrategy } from './SimEngine';
 import { SimChampion } from './SimTypes';
+import { CHAMPIONS } from '../data/champions';
+import { SYNERGIES } from '../data/synergies';
 
-/**
- * "Smart" AI — mimics a reasonably skilled player:
- * - Buys strongest affordable champions
- * - Places champions near the path
- * - Levels up at key thresholds
- * - Econ: saves for interest when safe, spends when needed
- * - Rerolls to find upgrades when appropriate
- */
+// ── Shared helpers ────────────────────────────────────
+
+function countCopies(state: { champions: SimChampion[]; bench: (SimChampion | null)[] }, id: string, starLevel: number): number {
+  let count = 0;
+  for (const c of state.bench) {
+    if (c && c.championId === id && c.starLevel === starLevel) count++;
+  }
+  for (const c of state.champions) {
+    if (c.championId === id && c.starLevel === starLevel) count++;
+  }
+  return count;
+}
+
+function placeAllBenchChampions(engine: SimEngine): void {
+  const state = engine.state;
+  const tiles = engine.getAvailableTiles();
+  let tileIdx = 0;
+
+  for (let i = 0; i < state.bench.length; i++) {
+    const champ = state.bench[i];
+    if (!champ) continue;
+
+    const placedCount = state.champions.filter(c => c.placed).length;
+    if (placedCount >= engine.getMaxBoardSize()) break;
+
+    while (tileIdx < tiles.length) {
+      const tile = tiles[tileIdx];
+      tileIdx++;
+      if (engine.placeChampion(champ, tile.col, tile.row)) break;
+    }
+  }
+}
+
+function levelUpSmart(engine: SimEngine, benchChamps: number): void {
+  const state = engine.state;
+  const placedCount = state.champions.filter(c => c.placed).length;
+  const maxBoard = engine.getMaxBoardSize();
+
+  while (
+    state.gold >= 4 &&
+    state.level < 9 &&
+    (
+      (placedCount >= maxBoard && benchChamps > 0) ||
+      (state.waveNumber >= 6 && state.gold >= 10)
+    )
+  ) {
+    const prevLevel = state.level;
+    engine.buyXp();
+    if (state.level === prevLevel) break;
+    if (state.gold < 4) break;
+  }
+}
+
+// ── SmartAI: generic skilled player ────────────────────
+
 export class SmartAI implements AIStrategy {
   shop(engine: SimEngine, offers: ShopOffer[]): ShopOffer[] {
     const state = engine.state;
-
-    // Phase 1: Level up if it unlocks a board slot and we have bench champions to place
     const benchChamps = state.bench.filter(b => b !== null).length;
-    this.levelUpIfNeeded(engine, benchChamps);
+    levelUpSmart(engine, benchChamps);
 
-    // Phase 2: Buy champions from shop
     offers = this.buyFromShop(engine, offers);
+    placeAllBenchChampions(engine);
 
-    // Phase 3: Place all bench champions on board if possible
-    this.placeAllBenchChampions(engine);
-
-    // Phase 4: Maybe reroll if we have gold to spare and board isn't full
     if (state.gold >= 6 && state.waveNumber >= 3) {
       offers = engine.rerollShop(offers);
       offers = this.buyFromShop(engine, offers);
-      this.placeAllBenchChampions(engine);
+      placeAllBenchChampions(engine);
     }
 
     return offers;
   }
 
-  private levelUpIfNeeded(engine: SimEngine, benchChamps: number): void {
-    const state = engine.state;
-    const placedCount = state.champions.filter(c => c.placed).length;
-    const maxBoard = engine.getMaxBoardSize();
-
-    // Level up if: we have bench champions waiting AND leveling would give us more board space
-    // OR if we're past wave 5 and have gold to spare
-    while (
-      state.gold >= 4 &&
-      state.level < 9 &&
-      (
-        (placedCount >= maxBoard && benchChamps > 0) ||
-        (state.waveNumber >= 6 && state.gold >= 10)
-      )
-    ) {
-      const prevLevel = state.level;
-      engine.buyXp();
-      if (state.level === prevLevel) break; // didn't level up, save gold
-      // Recheck if we should keep leveling
-      if (state.gold < 4) break;
-    }
-  }
-
   private buyFromShop(engine: SimEngine, offers: ShopOffer[]): ShopOffer[] {
     const state = engine.state;
-
-    // Sort offers: prefer champions that would create pairs/triples, then by cost (higher = stronger)
     const scoredOffers = offers
-      .map((offer, idx) => ({
-        offer,
-        idx,
-        score: this.scoreChampionBuy(engine, offer),
-      }))
+      .map((offer) => ({ offer, score: this.scoreChampionBuy(engine, offer) }))
       .filter(o => o.offer.available)
       .sort((a, b) => b.score - a.score);
 
     for (const { offer } of scoredOffers) {
-      if (!offer.available) continue;
-      if (!engine.canAfford(offer.championData.cost)) continue;
-
-      // Don't buy if bench is full and no merge possible
-      const benchFull = state.bench.filter(b => b === null).length === 0
-        && state.bench.length >= 8;
+      if (!offer.available || !engine.canAfford(offer.championData.cost)) continue;
+      const benchFull = state.bench.filter(b => b === null).length === 0 && state.bench.length >= 8;
       if (benchFull) continue;
-
-      // Don't spend below 10 gold (interest threshold) unless it's a good buy
       const score = this.scoreChampionBuy(engine, offer);
       if (state.gold - offer.championData.cost < 10 && score < 5 && state.waveNumber > 3) continue;
-
       engine.buyChampion(offer);
     }
-
     return offers;
   }
 
@@ -97,14 +103,12 @@ export class SmartAI implements AIStrategy {
     if (!offer.available) return -1;
     const state = engine.state;
     const data = offer.championData;
-    let score = data.cost * 2; // higher cost = generally better
+    let score = data.cost * 2;
 
-    // Bonus for having copies (closer to star upgrade)
-    const copies = this.countCopies(state, data.id, 1);
-    if (copies >= 2) score += 20; // would trigger 3-star merge
-    else if (copies >= 1) score += 5; // pair
+    const copies = countCopies(state, data.id, 1);
+    if (copies >= 2) score += 20;
+    else if (copies >= 1) score += 5;
 
-    // Bonus for synergy potential
     const traitCounts: Record<string, number> = {};
     for (const champ of state.champions) {
       if (!champ.placed) continue;
@@ -114,120 +118,173 @@ export class SmartAI implements AIStrategy {
     }
     for (const trait of data.traits) {
       const count = traitCounts[trait] || 0;
-      if (count >= 1) score += 3; // would activate or strengthen a synergy
+      if (count >= 1) score += 3;
     }
 
     return score;
   }
-
-  private countCopies(state: { champions: SimChampion[]; bench: (SimChampion | null)[] }, id: string, starLevel: number): number {
-    let count = 0;
-    for (const c of state.bench) {
-      if (c && c.championId === id && c.starLevel === starLevel) count++;
-    }
-    for (const c of state.champions) {
-      if (c.championId === id && c.starLevel === starLevel) count++;
-    }
-    return count;
-  }
-
-  private placeAllBenchChampions(engine: SimEngine): void {
-    const state = engine.state;
-    const tiles = engine.getAvailableTiles();
-    let tileIdx = 0;
-
-    for (let i = 0; i < state.bench.length; i++) {
-      const champ = state.bench[i];
-      if (!champ) continue;
-
-      const placedCount = state.champions.filter(c => c.placed).length;
-      if (placedCount >= engine.getMaxBoardSize()) break;
-
-      // Find next available tile
-      while (tileIdx < tiles.length) {
-        const tile = tiles[tileIdx];
-        tileIdx++;
-        if (engine.placeChampion(champ, tile.col, tile.row)) break;
-      }
-    }
-  }
 }
 
-/**
- * "Greedy" AI — buys everything it can afford, no economy management.
- * Represents a new/casual player.
- */
+// ── GreedyAI: casual player ───────────────────────────
+
 export class GreedyAI implements AIStrategy {
   shop(engine: SimEngine, offers: ShopOffer[]): ShopOffer[] {
-    // Buy everything affordable
     for (const offer of offers) {
       if (offer.available && engine.canAfford(offer.championData.cost)) {
         engine.buyChampion(offer);
       }
     }
-
-    // Place everything
-    const state = engine.state;
-    const tiles = engine.getAvailableTiles();
-    let tileIdx = 0;
-
-    for (let i = 0; i < state.bench.length; i++) {
-      const champ = state.bench[i];
-      if (!champ) continue;
-      const placedCount = state.champions.filter(c => c.placed).length;
-      if (placedCount >= engine.getMaxBoardSize()) break;
-
-      while (tileIdx < tiles.length) {
-        const tile = tiles[tileIdx];
-        tileIdx++;
-        if (engine.placeChampion(champ, tile.col, tile.row)) break;
-      }
-    }
-
+    placeAllBenchChampions(engine);
     return offers;
   }
 }
 
-/**
- * "Econ" AI — focuses on saving gold for interest, levels aggressively.
- * Represents a player who knows the economy system well.
- */
+// ── EconAI: economy-focused player ────────────────────
+
 export class EconAI implements AIStrategy {
   shop(engine: SimEngine, offers: ShopOffer[]): ShopOffer[] {
     const state = engine.state;
 
-    // Level up aggressively
     while (state.gold >= 8 && state.level < 9) {
       const prev = state.level;
       engine.buyXp();
       if (state.level === prev) break;
     }
 
-    // Only buy if we can stay at 50+ gold (for max interest) or it's early game
     const minGold = state.waveNumber <= 3 ? 0 : 50;
-
     for (const offer of offers) {
       if (!offer.available) continue;
       if (state.gold - offer.championData.cost < minGold) continue;
       engine.buyChampion(offer);
     }
 
-    // Place champions
-    const tiles = engine.getAvailableTiles();
-    let tileIdx = 0;
-    for (let i = 0; i < state.bench.length; i++) {
-      const champ = state.bench[i];
-      if (!champ) continue;
-      const placedCount = state.champions.filter(c => c.placed).length;
-      if (placedCount >= engine.getMaxBoardSize()) break;
+    placeAllBenchChampions(engine);
+    return offers;
+  }
+}
 
-      while (tileIdx < tiles.length) {
-        const tile = tiles[tileIdx];
-        tileIdx++;
-        if (engine.placeChampion(champ, tile.col, tile.row)) break;
-      }
+// ── SynergyAI: focuses on a single synergy trait ──────
+
+/**
+ * One AI per synergy. Prioritizes buying champions with the target trait,
+ * and fills remaining slots with the best available.
+ */
+export class SynergyAI implements AIStrategy {
+  private targetTrait: string;
+  private traitChampionIds: Set<string>;
+
+  constructor(targetTrait: string) {
+    this.targetTrait = targetTrait;
+    // Pre-compute which champion IDs have this trait
+    this.traitChampionIds = new Set(
+      CHAMPIONS.filter(c => c.traits.includes(targetTrait)).map(c => c.id)
+    );
+  }
+
+  shop(engine: SimEngine, offers: ShopOffer[]): ShopOffer[] {
+    const state = engine.state;
+    const benchChamps = state.bench.filter(b => b !== null).length;
+    levelUpSmart(engine, benchChamps);
+
+    offers = this.buyFromShop(engine, offers);
+    placeAllBenchChampions(engine);
+
+    // Reroll more aggressively if we have gold and are looking for trait champs
+    const rerollThreshold = state.waveNumber <= 5 ? 6 : 4;
+    if (state.gold >= rerollThreshold && state.waveNumber >= 2) {
+      offers = engine.rerollShop(offers);
+      offers = this.buyFromShop(engine, offers);
+      placeAllBenchChampions(engine);
+    }
+
+    // Second reroll if we're flush with gold
+    if (state.gold >= 10 && state.waveNumber >= 5) {
+      offers = engine.rerollShop(offers);
+      offers = this.buyFromShop(engine, offers);
+      placeAllBenchChampions(engine);
     }
 
     return offers;
   }
+
+  private buyFromShop(engine: SimEngine, offers: ShopOffer[]): ShopOffer[] {
+    const state = engine.state;
+    const scoredOffers = offers
+      .map((offer) => ({ offer, score: this.scoreChampionBuy(engine, offer) }))
+      .filter(o => o.offer.available)
+      .sort((a, b) => b.score - a.score);
+
+    for (const { offer, score } of scoredOffers) {
+      if (!offer.available || !engine.canAfford(offer.championData.cost)) continue;
+      const benchFull = state.bench.filter(b => b === null).length === 0 && state.bench.length >= 8;
+      if (benchFull) continue;
+
+      // Be more willing to spend gold for trait champions
+      const isTraitChamp = this.traitChampionIds.has(offer.championData.id);
+      const goldFloor = isTraitChamp ? 2 : 10;
+      if (state.gold - offer.championData.cost < goldFloor && score < 5 && state.waveNumber > 3) continue;
+
+      engine.buyChampion(offer);
+    }
+    return offers;
+  }
+
+  private scoreChampionBuy(engine: SimEngine, offer: ShopOffer): number {
+    if (!offer.available) return -1;
+    const state = engine.state;
+    const data = offer.championData;
+    let score = data.cost; // base score by cost
+
+    // Big bonus for having the target trait
+    const hasTargetTrait = data.traits.includes(this.targetTrait);
+    if (hasTargetTrait) score += 15;
+
+    // Bonus for star upgrade potential
+    const copies = countCopies(state, data.id, 1);
+    if (copies >= 2) score += 25; // would trigger merge
+    else if (copies >= 1) score += 8;
+
+    // Bonus for synergy with existing board
+    const traitCounts: Record<string, number> = {};
+    for (const champ of state.champions) {
+      if (!champ.placed) continue;
+      for (const trait of champ.traits) {
+        traitCounts[trait] = (traitCounts[trait] || 0) + 1;
+      }
+    }
+    for (const trait of data.traits) {
+      const count = traitCounts[trait] || 0;
+      if (count >= 1) score += 4;
+      // Extra bonus if this would hit a new synergy tier
+      const synergy = SYNERGIES.find(s => s.id === trait);
+      if (synergy) {
+        for (const tier of synergy.tiers) {
+          if (count + 1 === tier.count) score += 6;
+        }
+      }
+    }
+
+    // Small penalty for non-trait champions if we already have enough board slots
+    if (!hasTargetTrait) {
+      const traitChampsOnBoard = state.champions.filter(
+        c => c.placed && c.traits.includes(this.targetTrait)
+      ).length;
+      const traitChampsOnBench = state.bench.filter(
+        c => c !== null && c.traits.includes(this.targetTrait)
+      ).length;
+      // If we don't have many trait champs yet, penalize off-trait purchases
+      if (traitChampsOnBoard + traitChampsOnBench < 4) {
+        score -= 5;
+      }
+    }
+
+    return score;
+  }
+}
+
+/**
+ * Get all unique trait IDs from the synergy data.
+ */
+export function getAllTraits(): string[] {
+  return SYNERGIES.map(s => s.id);
 }

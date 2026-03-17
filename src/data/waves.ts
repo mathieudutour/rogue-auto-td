@@ -12,14 +12,14 @@ export interface WaveData {
 /** Generate wave data for a given wave number */
 export function getWaveData(waveNumber: number): WaveData {
   // Scaling: gentle linear early, compounding in late game
-  // Waves 1-15: +8% per wave (smooth ramp)
-  // Waves 16+: exponential growth that makes late game increasingly hard
+  // Waves 1-20: +5% per wave (smooth ramp)
+  // Waves 21+: exponential growth that makes late game increasingly hard
   let healthMultiplier: number;
-  if (waveNumber <= 15) {
-    healthMultiplier = 1 + (waveNumber - 1) * 0.08;
+  if (waveNumber <= 20) {
+    healthMultiplier = 1 + (waveNumber - 1) * 0.05;
   } else {
-    // Base from wave 15 (2.12x), then exponential
-    healthMultiplier = 2.12 * Math.pow(1.10, waveNumber - 15);
+    // Base from wave 20 (1.95x), then exponential
+    healthMultiplier = 1.95 * Math.pow(1.08, waveNumber - 20);
   }
 
   if (waveNumber <= 3) {
@@ -58,9 +58,9 @@ export function getWaveData(waveNumber: number): WaveData {
   // Wave 10+: boss every 5 waves, growing composition
   const isBossWave = waveNumber % 5 === 0;
   const entries: WaveEntry[] = [
-    { enemyType: 'basic', count: 6 + waveNumber, delayBetween: 800 },
-    { enemyType: 'fast', count: 3 + waveNumber, delayBetween: 600 },
-    { enemyType: 'tank', count: 1 + Math.floor(waveNumber / 3), delayBetween: 1200 },
+    { enemyType: 'basic', count: 4 + Math.floor(waveNumber * 0.8), delayBetween: 800 },
+    { enemyType: 'fast', count: 2 + Math.floor(waveNumber * 0.7), delayBetween: 600 },
+    { enemyType: 'tank', count: 1 + Math.floor(waveNumber / 4), delayBetween: 1200 },
   ];
 
   if (isBossWave) {

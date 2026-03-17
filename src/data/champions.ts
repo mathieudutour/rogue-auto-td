@@ -65,7 +65,7 @@ export const CHAMPIONS: ChampionData[] = [
     cost: 1,
     traits: ['arcane', 'guardian'],
     textureKey: 'champion_arcane_guardian',
-    stats: { damage: 10, range: 90, attackSpeed: 0.7, health: 120 },
+    stats: { damage: 12, range: 100, attackSpeed: 0.8, health: 120 },
   },
   {
     id: 'shadow_scout',
@@ -160,8 +160,8 @@ export const CHAMPIONS: ChampionData[] = [
     traits: ['nature', 'guardian'],
     textureKey: 'champion_nature_guardian',
     attackType: 'splash',
-    attackTypeParams: { splashRadius: 40, splashDamageFrac: 0.4 },
-    stats: { damage: 22, range: 90, attackSpeed: 0.7, health: 180 },
+    attackTypeParams: { splashRadius: 45, splashDamageFrac: 0.45 },
+    stats: { damage: 25, range: 95, attackSpeed: 0.75, health: 180 },
   },
   {
     id: 'ice_assassin',
@@ -233,7 +233,7 @@ export const CHAMPIONS: ChampionData[] = [
     textureKey: 'champion_shadow_legendary',
     attackType: 'chain',
     attackTypeParams: { chainCount: 5, chainRange: 100, chainDamageFrac: 0.75 },
-    stats: { damage: 70, range: 85, attackSpeed: 1.6, health: 120 },
+    stats: { damage: 65, range: 85, attackSpeed: 1.3, health: 120 },
   },
   {
     id: 'frost_queen',
