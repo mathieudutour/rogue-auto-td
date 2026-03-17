@@ -21,16 +21,6 @@ const COST_BG: Record<number, number> = {
   5: 0x28200a,
 };
 
-/** Attack type short labels */
-function attackLabel(type?: string): string {
-  switch (type) {
-    case 'splash': return 'AoE';
-    case 'slow': return 'Slow';
-    case 'chain': return 'Chain';
-    case 'dot': return 'DoT';
-    default: return '';
-  }
-}
 
 export class ShopPanel {
   private scene: Phaser.Scene;
@@ -225,17 +215,6 @@ export class ShopPanel {
     statsText.setName('statsText');
     container.add(statsText);
 
-    // Attack type badge
-    const atkBadge = this.scene.add.text(width - 4, statsY, '', {
-      fontSize: `${m.isMobile ? 9 : 9}px`,
-      color: '#ffcc44',
-      fontFamily: 'monospace',
-      fontStyle: 'bold',
-    });
-    atkBadge.setOrigin(1, 0);
-    atkBadge.setName('atkBadge');
-    container.add(atkBadge);
-
     // Buy button area at bottom
     const buyH = m.isMobile ? 20 : 22;
     const buyBar = this.scene.add.rectangle(0, height - buyH, width, buyH, 0x224422, 0.8);
@@ -387,7 +366,6 @@ export class ShopPanel {
       const nameText = container.getByName('nameText') as Phaser.GameObjects.Text;
       const traitText = container.getByName('traitText') as Phaser.GameObjects.Text;
       const statsText = container.getByName('statsText') as Phaser.GameObjects.Text;
-      const atkBadge = container.getByName('atkBadge') as Phaser.GameObjects.Text;
       const buyBar = container.getByName('buyBar') as Phaser.GameObjects.Rectangle;
       const buyText = container.getByName('buyText') as Phaser.GameObjects.Text;
 
@@ -415,7 +393,6 @@ export class ShopPanel {
         traitText.setText(traitStr);
 
         if (m.isMobile) {
-          // Compact stats for mobile
           statsText.setText(`D${d.stats.damage} R${d.stats.range} S${d.stats.attackSpeed.toFixed(1)}`);
         } else {
           const dmgStr = `DMG ${d.stats.damage}`;
@@ -423,10 +400,6 @@ export class ShopPanel {
           const spdStr = `SPD ${d.stats.attackSpeed.toFixed(1)}`;
           statsText.setText(`${dmgStr}  ${rngStr}\n${spdStr}`);
         }
-
-        const atk = attackLabel(d.attackType);
-        atkBadge.setText(atk);
-        atkBadge.setVisible(!!atk);
 
         buyBar.setFillStyle(0x224422, 0.8);
         buyBar.setVisible(true);
@@ -444,7 +417,6 @@ export class ShopPanel {
         nameText.setColor('#444455');
         traitText.setText('');
         statsText.setText('');
-        atkBadge.setVisible(false);
         buyBar.setVisible(false);
         buyText.setText('');
       }

@@ -30,7 +30,7 @@ import {
   STAR_3_MULTIPLIER,
   MAX_WIN_STREAK_BONUS,
 } from '../utils/constants';
-import { SimChampion, SimEnemy, SimProjectile, SimState } from './SimTypes';
+import { SimChampion, SimEnemy, SimProjectile, SimState, SimSynergyBonuses, defaultSimBonuses } from './SimTypes';
 
 const PROJECTILE_SPEED = 300;
 const PROJECTILE_HIT_RANGE = 8;
@@ -316,20 +316,17 @@ export class SimEngine {
     let baseDamage = data.stats.damage;
     let baseRange = data.stats.range;
     let baseAttackSpeed = data.stats.attackSpeed;
-    let baseHealth = data.stats.health;
 
     // Apply star multipliers
     if (starLevel >= 2) {
       baseDamage = Math.round(baseDamage * STAR_2_MULTIPLIER);
       baseRange = Math.round(baseRange * 1.1);
       baseAttackSpeed = baseAttackSpeed * 1.1;
-      baseHealth = Math.round(baseHealth * STAR_2_MULTIPLIER);
     }
     if (starLevel >= 3) {
       baseDamage = Math.round((data.stats.damage * STAR_3_MULTIPLIER));
       baseRange = Math.round(data.stats.range * 1.1 * 1.1);
       baseAttackSpeed = data.stats.attackSpeed * 1.1 * 1.1;
-      baseHealth = Math.round((data.stats.health * STAR_3_MULTIPLIER));
     }
 
     return {
@@ -341,12 +338,10 @@ export class SimEngine {
       baseDamage,
       baseRange,
       baseAttackSpeed,
-      baseHealth,
       damage: baseDamage,
       range: baseRange,
       attackSpeed: baseAttackSpeed,
-      attackType: data.attackType || 'normal',
-      attackTypeParams: data.attackTypeParams || {},
+      synergyBonuses: defaultSimBonuses(),
       x: 0,
       y: 0,
       placed: false,
@@ -441,12 +436,10 @@ export class SimEngine {
 
     // Evolve keeper
     keeper.starLevel++;
-    const data = getChampionById(keeper.championId)!;
     const mult = keeper.starLevel === 2 ? STAR_2_MULTIPLIER : STAR_3_MULTIPLIER;
     keeper.baseDamage = Math.round(keeper.baseDamage * mult / (keeper.starLevel === 3 ? STAR_2_MULTIPLIER : 1));
     keeper.baseRange = Math.round(keeper.baseRange * 1.1);
     keeper.baseAttackSpeed = keeper.baseAttackSpeed * 1.1;
-    keeper.baseHealth = Math.round(keeper.baseHealth * mult / (keeper.starLevel === 3 ? STAR_2_MULTIPLIER : 1));
     keeper.damage = keeper.baseDamage;
     keeper.range = keeper.baseRange;
     keeper.attackSpeed = keeper.baseAttackSpeed;
@@ -470,6 +463,7 @@ export class SimEngine {
 
     // Reset bonuses
     for (const champ of this.state.champions) {
+      champ.synergyBonuses = defaultSimBonuses();
       champ.damage = champ.baseDamage;
       champ.range = champ.baseRange;
       champ.attackSpeed = champ.baseAttackSpeed;
@@ -489,21 +483,45 @@ export class SimEngine {
       }
 
       if (activeTier) {
+        const applyToAll = activeTier.bonuses.allAllies === true;
         for (const champ of this.state.champions) {
           if (!champ.placed) continue;
-          if (!champ.traits.includes(synergy.id)) continue;
+          if (!applyToAll && !champ.traits.includes(synergy.id)) continue;
 
-          if (activeTier.bonuses.damageMult) {
-            champ.damage = Math.round(champ.damage * activeTier.bonuses.damageMult);
-          }
-          if (activeTier.bonuses.rangeMult) {
-            champ.range = Math.round(champ.range * activeTier.bonuses.rangeMult);
-          }
-          if (activeTier.bonuses.attackSpeedMult) {
-            champ.attackSpeed *= activeTier.bonuses.attackSpeedMult;
-          }
+          const b = activeTier.bonuses;
+          const s = champ.synergyBonuses;
+          if (b.damageMult) s.damageMult *= b.damageMult;
+          if (b.attackSpeedMult) s.attackSpeedMult *= b.attackSpeedMult;
+          if (b.rangeMult) s.rangeMult *= b.rangeMult;
+          if (b.slowAmount && (s.slowAmount === 0 || b.slowAmount < s.slowAmount)) s.slowAmount = b.slowAmount;
+          if (b.slowDuration) s.slowDuration = Math.max(s.slowDuration, b.slowDuration);
+          if (b.burnOnHit) s.burnOnHit = Math.max(s.burnOnHit, b.burnOnHit);
+          if (b.burnRadius) s.burnRadius = Math.max(s.burnRadius, b.burnRadius);
+          if (b.splashOnHit) s.splashOnHit = true;
+          if (b.splashFrac) s.splashFrac = Math.max(s.splashFrac, b.splashFrac);
+          if (b.splashRadius) s.splashRadius = Math.max(s.splashRadius, b.splashRadius);
+          if (b.chainOnHit) s.chainOnHit = Math.max(s.chainOnHit, b.chainOnHit);
+          if (b.chainRange) s.chainRange = Math.max(s.chainRange, b.chainRange);
+          if (b.chainDamageFrac) s.chainDamageFrac = Math.max(s.chainDamageFrac, b.chainDamageFrac);
+          if (b.dotOnHit) s.dotOnHit = Math.max(s.dotOnHit, b.dotOnHit);
+          if (b.dotDuration) s.dotDuration = Math.max(s.dotDuration, b.dotDuration);
+          if (b.dotTickRate) s.dotTickRate = Math.max(s.dotTickRate, b.dotTickRate);
+          if (b.critChance) s.critChance = Math.max(s.critChance, b.critChance);
+          if (b.critMult) s.critMult = Math.max(s.critMult, b.critMult);
+          if (b.multishot) s.multishot = Math.max(s.multishot, b.multishot);
+          if (b.executeThreshold) s.executeThreshold = Math.max(s.executeThreshold, b.executeThreshold);
+          if (b.freezeChance) s.freezeChance = Math.max(s.freezeChance, b.freezeChance);
+          if (b.freezeDuration) s.freezeDuration = Math.max(s.freezeDuration, b.freezeDuration);
+          if (b.bonusGoldOnKill) s.bonusGoldOnKill += b.bonusGoldOnKill;
         }
       }
+    }
+
+    // Apply stat multipliers
+    for (const champ of this.state.champions) {
+      champ.damage = Math.round(champ.baseDamage * champ.synergyBonuses.damageMult);
+      champ.range = Math.round(champ.baseRange * champ.synergyBonuses.rangeMult);
+      champ.attackSpeed = champ.baseAttackSpeed * champ.synergyBonuses.attackSpeedMult;
     }
   }
 
@@ -638,8 +656,7 @@ export class SimEngine {
               damage: champ.damage,
               x: champ.x,
               y: champ.y,
-              attackType: champ.attackType,
-              attackTypeParams: champ.attackTypeParams,
+              synergy: { ...champ.synergyBonuses },
             });
             champ.attackCooldown = 1 / champ.attackSpeed;
           }
@@ -679,94 +696,121 @@ export class SimEngine {
     return livesLost;
   }
 
-  /** Apply projectile hit effects based on attack type */
+  /** Apply projectile hit effects based on synergy bonuses */
   private applyProjectileHit(proj: SimProjectile, target: SimEnemy, enemies: SimEnemy[]): void {
+    const s = proj.synergy;
+    let finalDamage = proj.damage;
+
+    // Crit
+    if (s.critChance > 0 && Math.random() < s.critChance) {
+      finalDamage = Math.round(finalDamage * s.critMult);
+    }
+
     // Primary damage
-    target.health -= proj.damage;
+    target.health -= finalDamage;
     if (target.health <= 0) target.alive = false;
 
-    const params = proj.attackTypeParams;
+    // Slow
+    if (s.slowAmount > 0 && s.slowAmount < 1 && target.alive) {
+      if (s.slowAmount < target.slowMultiplier || target.slowTimer <= 0) {
+        target.slowMultiplier = s.slowAmount;
+        target.speed = target.baseSpeed * s.slowAmount;
+      }
+      target.slowTimer = Math.max(target.slowTimer, s.slowDuration);
+    }
 
-    switch (proj.attackType) {
-      case 'splash': {
-        const radius = params.splashRadius ?? 50;
-        const frac = params.splashDamageFrac ?? 0.5;
-        const splashDmg = Math.round(proj.damage * frac);
-        const targetPos = getPointAtDistance(this.path, target.distanceTraveled);
+    // DoT
+    if (s.dotOnHit > 0 && target.alive) {
+      if (s.dotOnHit > target.dotDamagePerTick || target.dotTimer <= 0) {
+        target.dotDamagePerTick = s.dotOnHit;
+        target.dotTickInterval = 1 / s.dotTickRate;
+      }
+      target.dotTimer = Math.max(target.dotTimer, s.dotDuration);
+      if (target.dotTickTimer <= 0) target.dotTickTimer = target.dotTickInterval;
+    }
+
+    // Splash
+    if (s.splashOnHit) {
+      const targetPos = getPointAtDistance(this.path, target.distanceTraveled);
+      const splashDmg = Math.round(proj.damage * s.splashFrac);
+      for (const enemy of enemies) {
+        if (!enemy.alive || enemy === target) continue;
+        const pos = getPointAtDistance(this.path, enemy.distanceTraveled);
+        const dx = pos.x - targetPos.x;
+        const dy = pos.y - targetPos.y;
+        if (Math.sqrt(dx * dx + dy * dy) <= s.splashRadius) {
+          enemy.health -= splashDmg;
+          if (enemy.health <= 0) enemy.alive = false;
+        }
+      }
+    }
+
+    // Chain
+    if (s.chainOnHit > 0) {
+      let currentTarget = target;
+      let currentDamage = proj.damage;
+      const hit = new Set<SimEnemy>([target]);
+
+      for (let i = 0; i < s.chainOnHit; i++) {
+        currentDamage = Math.round(currentDamage * s.chainDamageFrac);
+        if (currentDamage < 1) break;
+
+        const currentPos = getPointAtDistance(this.path, currentTarget.distanceTraveled);
+        let bestEnemy: SimEnemy | null = null;
+        let bestDist = Infinity;
 
         for (const enemy of enemies) {
-          if (!enemy.alive || enemy === target) continue;
+          if (!enemy.alive || hit.has(enemy)) continue;
           const pos = getPointAtDistance(this.path, enemy.distanceTraveled);
-          const dx = pos.x - targetPos.x;
-          const dy = pos.y - targetPos.y;
-          if (Math.sqrt(dx * dx + dy * dy) <= radius) {
-            enemy.health -= splashDmg;
-            if (enemy.health <= 0) enemy.alive = false;
+          const dx = pos.x - currentPos.x;
+          const dy = pos.y - currentPos.y;
+          const d = Math.sqrt(dx * dx + dy * dy);
+          if (d <= s.chainRange && d < bestDist) {
+            bestDist = d;
+            bestEnemy = enemy;
           }
         }
-        break;
+
+        if (!bestEnemy) break;
+        bestEnemy.health -= currentDamage;
+        if (bestEnemy.health <= 0) bestEnemy.alive = false;
+        hit.add(bestEnemy);
+        currentTarget = bestEnemy;
       }
+    }
 
-      case 'slow': {
-        const mult = params.slowAmount ?? 0.5;
-        const dur = params.slowDuration ?? 1.5;
-        if (mult < target.slowMultiplier || target.slowTimer <= 0) {
-          target.slowMultiplier = mult;
-          target.speed = target.baseSpeed * mult;
-        }
-        target.slowTimer = Math.max(target.slowTimer, dur);
-        break;
-      }
-
-      case 'chain': {
-        const chainCount = params.chainCount ?? 3;
-        const chainRange = params.chainRange ?? 80;
-        const chainFrac = params.chainDamageFrac ?? 0.7;
-        let currentTarget = target;
-        let currentDamage = proj.damage;
-        const hit = new Set<SimEnemy>([target]);
-
-        for (let i = 0; i < chainCount; i++) {
-          currentDamage = Math.round(currentDamage * chainFrac);
-          if (currentDamage < 1) break;
-
-          const currentPos = getPointAtDistance(this.path, currentTarget.distanceTraveled);
-          let bestEnemy: SimEnemy | null = null;
-          let bestDist = Infinity;
-
-          for (const enemy of enemies) {
-            if (!enemy.alive || hit.has(enemy)) continue;
-            const pos = getPointAtDistance(this.path, enemy.distanceTraveled);
-            const dx = pos.x - currentPos.x;
-            const dy = pos.y - currentPos.y;
-            const d = Math.sqrt(dx * dx + dy * dy);
-            if (d <= chainRange && d < bestDist) {
-              bestDist = d;
-              bestEnemy = enemy;
-            }
+    // Burn AoE
+    if (s.burnOnHit > 0) {
+      const targetPos = getPointAtDistance(this.path, target.distanceTraveled);
+      for (const enemy of enemies) {
+        if (!enemy.alive) continue;
+        const pos = getPointAtDistance(this.path, enemy.distanceTraveled);
+        const dx = pos.x - targetPos.x;
+        const dy = pos.y - targetPos.y;
+        if (Math.sqrt(dx * dx + dy * dy) <= s.burnRadius) {
+          if (s.burnOnHit > enemy.dotDamagePerTick || enemy.dotTimer <= 0) {
+            enemy.dotDamagePerTick = s.burnOnHit;
+            enemy.dotTickInterval = 0.5;
           }
-
-          if (!bestEnemy) break;
-          bestEnemy.health -= currentDamage;
-          if (bestEnemy.health <= 0) bestEnemy.alive = false;
-          hit.add(bestEnemy);
-          currentTarget = bestEnemy;
+          enemy.dotTimer = Math.max(enemy.dotTimer, 2.0);
+          if (enemy.dotTickTimer <= 0) enemy.dotTickTimer = enemy.dotTickInterval;
         }
-        break;
       }
+    }
 
-      case 'dot': {
-        const dotDmg = params.dotDamage ?? 5;
-        const dotDur = params.dotDuration ?? 3;
-        const dotRate = params.dotTickRate ?? 2;
-        if (dotDmg > target.dotDamagePerTick || target.dotTimer <= 0) {
-          target.dotDamagePerTick = dotDmg;
-          target.dotTickInterval = 1 / dotRate;
-        }
-        target.dotTimer = Math.max(target.dotTimer, dotDur);
-        if (target.dotTickTimer <= 0) target.dotTickTimer = target.dotTickInterval;
-        break;
+    // Execute
+    if (s.executeThreshold > 0 && target.alive) {
+      if (target.health / target.maxHealth <= s.executeThreshold) {
+        target.health = 0;
+        target.alive = false;
       }
+    }
+
+    // Freeze
+    if (s.freezeChance > 0 && target.alive && Math.random() < s.freezeChance) {
+      target.slowMultiplier = 0;
+      target.speed = 0;
+      target.slowTimer = Math.max(target.slowTimer, s.freezeDuration);
     }
   }
 

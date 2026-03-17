@@ -1,10 +1,10 @@
 import Phaser from 'phaser';
 import { GameScene } from '../scenes/GameScene';
-import { ChampionData, AttackType, AttackTypeParams } from '../data/champions';
+import { ChampionData } from '../data/champions';
 import { SynergyTier } from '../data/synergies';
 import {
-  HeldItem, ItemStats, MAX_ITEMS_PER_CHAMPION,
-  getHeldItemStats, getHeldItemColor, getHeldItemName,
+  HeldItem, MAX_ITEMS_PER_CHAMPION,
+  getHeldItemStats, getHeldItemColor,
   findCombinedItem,
 } from '../data/items';
 import { STAR_2_MULTIPLIER, STAR_3_MULTIPLIER, COLORS } from '../utils/constants';
@@ -13,29 +13,40 @@ export interface SynergyBonusState {
   damageMult: number;
   attackSpeedMult: number;
   rangeMult: number;
-  // Special effects from max-tier synergies
+  // Effects granted by synergies
+  slowAmount: number;       // 0 = no slow, otherwise speed multiplier (0.7 = 30% slow)
+  slowDuration: number;
+  burnOnHit: number;
+  burnRadius: number;
+  splashOnHit: boolean;
+  splashRadius: number;
+  splashFrac: number;
+  chainOnHit: number;       // 0 = no chain, otherwise bounce count
+  chainRange: number;
+  chainDamageFrac: number;
+  dotOnHit: number;         // 0 = no dot, otherwise damage per tick
+  dotDuration: number;
+  dotTickRate: number;
   critChance: number;
   critMult: number;
   multishot: number;
   executeThreshold: number;
-  burnOnHit: number;
-  burnRadius: number;
   freezeChance: number;
   freezeDuration: number;
-  splashOnHit: boolean;
-  splashRadius: number;
-  splashFrac: number;
   bonusGoldOnKill: number;
-  damageReflect: number;
 }
 
 function defaultBonuses(): SynergyBonusState {
   return {
     damageMult: 1, attackSpeedMult: 1, rangeMult: 1,
-    critChance: 0, critMult: 1, multishot: 0, executeThreshold: 0,
-    burnOnHit: 0, burnRadius: 0, freezeChance: 0, freezeDuration: 0,
+    slowAmount: 0, slowDuration: 0,
+    burnOnHit: 0, burnRadius: 0,
     splashOnHit: false, splashRadius: 0, splashFrac: 0,
-    bonusGoldOnKill: 0, damageReflect: 0,
+    chainOnHit: 0, chainRange: 0, chainDamageFrac: 0,
+    dotOnHit: 0, dotDuration: 0, dotTickRate: 0,
+    critChance: 0, critMult: 1, multishot: 0, executeThreshold: 0,
+    freezeChance: 0, freezeDuration: 0,
+    bonusGoldOnKill: 0,
   };
 }
 
@@ -51,15 +62,10 @@ export class Champion {
   traits: string[];
   textureKey: string;
 
-  // Attack type
-  attackType: AttackType;
-  attackTypeParams: AttackTypeParams;
-
   // Base stats (before synergy bonuses)
   baseDamage: number;
   baseRange: number;
   baseAttackSpeed: number;
-  baseHealth: number;
 
   // Effective stats (after synergies)
   damage: number;
@@ -91,13 +97,10 @@ export class Champion {
     this.cost = data.cost;
     this.traits = [...data.traits];
     this.textureKey = data.textureKey;
-    this.attackType = data.attackType || 'normal';
-    this.attackTypeParams = data.attackTypeParams || {};
 
     this.baseDamage = data.stats.damage;
     this.baseRange = data.stats.range;
     this.baseAttackSpeed = data.stats.attackSpeed;
-    this.baseHealth = data.stats.health;
 
     this.damage = this.baseDamage;
     this.range = this.baseRange;
@@ -182,8 +185,6 @@ export class Champion {
 
   private findTarget(): import('../entities/Enemy').Enemy | null {
     let closest: import('../entities/Enemy').Enemy | null = null;
-    let closestDist = Infinity;
-    // Prefer enemies furthest along the path (most dangerous)
     let furthestProgress = -1;
 
     for (const enemy of this.scene.enemies) {
@@ -198,7 +199,6 @@ export class Champion {
         if (progress > furthestProgress) {
           furthestProgress = progress;
           closest = enemy;
-          closestDist = dist;
         }
       }
     }
@@ -212,19 +212,15 @@ export class Champion {
 
   // ── Item management ──────────────────────────────────
 
-  /** Try to add an item. If it's a component and the champion already has a component, combine them.
-   *  Returns { accepted, returnedItem? } — returnedItem is null unless no room. */
   addItem(item: HeldItem): { accepted: boolean; combined: boolean } {
     if (this.items.length >= MAX_ITEMS_PER_CHAMPION) return { accepted: false, combined: false };
 
-    // If adding a component and champion already holds a component, try to combine
     if (item.isComponent) {
       for (let i = 0; i < this.items.length; i++) {
         const existing = this.items[i];
         if (existing.isComponent) {
           const combined = findCombinedItem(existing.componentId!, item.componentId!);
           if (combined) {
-            // Replace the existing component with the combined item
             this.items[i] = { isComponent: false, combinedId: combined.id };
             this.applyStats();
             this.updateItemDots();
@@ -234,14 +230,12 @@ export class Champion {
       }
     }
 
-    // No combination possible — just add the item
     this.items.push(item);
     this.applyStats();
     this.updateItemDots();
     return { accepted: true, combined: false };
   }
 
-  /** Remove all items and return them */
   removeAllItems(): HeldItem[] {
     const removed = [...this.items];
     this.items = [];
@@ -254,7 +248,6 @@ export class Champion {
     return this.items.length < MAX_ITEMS_PER_CHAMPION;
   }
 
-  /** Aggregate item stats */
   private getItemBonuses() {
     const result = {
       flatDamage: 0, flatRange: 0, flatAttackSpeed: 0,
@@ -311,35 +304,30 @@ export class Champion {
     this.itemDots.setDepth(this.sprite.depth + 2);
   }
 
-  /** TFT-style sell price: full investment minus 1g for starred units (except 1-cost) */
   getSellPrice(): number {
     const invested = this.cost * Math.pow(3, this.starLevel - 1);
     if (this.starLevel === 1 || this.cost === 1) return invested;
     return invested - 1;
   }
 
-  /** Upgrade star level (called when 3 copies merge) */
   evolve(): void {
     this.starLevel++;
     const mult = this.starLevel === 2 ? STAR_2_MULTIPLIER : STAR_3_MULTIPLIER;
     this.baseDamage = Math.round(this.baseDamage * mult / (this.starLevel === 3 ? STAR_2_MULTIPLIER : 1));
     this.baseRange = Math.round(this.baseRange * 1.1);
     this.baseAttackSpeed = this.baseAttackSpeed * 1.1;
-    this.baseHealth = Math.round(this.baseHealth * mult / (this.starLevel === 3 ? STAR_2_MULTIPLIER : 1));
     this.applyStats();
     this.updateStarDisplay();
     this.sprite.setScale(1.2 + (this.starLevel - 1) * 0.2);
   }
 
-  /** Recalculate effective stats from base + synergy + item bonuses */
   applyStats(): void {
     const ib = this.getItemBonuses();
-    // Base × synergy multipliers + flat item bonuses
     this.damage = Math.round((this.baseDamage + ib.flatDamage) * this.synergyBonuses.damageMult * ib.damageMult);
     this.range = Math.round((this.baseRange + ib.flatRange) * this.synergyBonuses.rangeMult);
     this.attackSpeed = (this.baseAttackSpeed + ib.flatAttackSpeed) * this.synergyBonuses.attackSpeedMult;
 
-    // Merge item effects into synergyBonuses so the combat system picks them up
+    // Merge item effects into synergyBonuses so combat system picks them up
     if (ib.critChance > 0) this.synergyBonuses.critChance = Math.min(1, this.synergyBonuses.critChance + ib.critChance);
     if (ib.critMult > this.synergyBonuses.critMult) this.synergyBonuses.critMult = ib.critMult;
     if (ib.splashOnHit) {
@@ -360,23 +348,37 @@ export class Champion {
   }
 
   applySynergyBonus(bonuses: SynergyTier['bonuses']): void {
+    // Multiplicative stat bonuses (stack multiplicatively)
     if (bonuses.damageMult) this.synergyBonuses.damageMult *= bonuses.damageMult;
     if (bonuses.attackSpeedMult) this.synergyBonuses.attackSpeedMult *= bonuses.attackSpeedMult;
     if (bonuses.rangeMult) this.synergyBonuses.rangeMult *= bonuses.rangeMult;
-    // Special effects (take the highest value if multiple sources)
+
+    // Effects: take the strongest from any source
+    if (bonuses.slowAmount) {
+      // Lower slowAmount = stronger slow, so take the minimum
+      if (this.synergyBonuses.slowAmount === 0 || bonuses.slowAmount < this.synergyBonuses.slowAmount) {
+        this.synergyBonuses.slowAmount = bonuses.slowAmount;
+      }
+    }
+    if (bonuses.slowDuration) this.synergyBonuses.slowDuration = Math.max(this.synergyBonuses.slowDuration, bonuses.slowDuration);
+    if (bonuses.burnOnHit) this.synergyBonuses.burnOnHit = Math.max(this.synergyBonuses.burnOnHit, bonuses.burnOnHit);
+    if (bonuses.burnRadius) this.synergyBonuses.burnRadius = Math.max(this.synergyBonuses.burnRadius, bonuses.burnRadius);
+    if (bonuses.splashOnHit) this.synergyBonuses.splashOnHit = true;
+    if (bonuses.splashRadius) this.synergyBonuses.splashRadius = Math.max(this.synergyBonuses.splashRadius, bonuses.splashRadius);
+    if (bonuses.splashFrac) this.synergyBonuses.splashFrac = Math.max(this.synergyBonuses.splashFrac, bonuses.splashFrac);
+    if (bonuses.chainOnHit) this.synergyBonuses.chainOnHit = Math.max(this.synergyBonuses.chainOnHit, bonuses.chainOnHit);
+    if (bonuses.chainRange) this.synergyBonuses.chainRange = Math.max(this.synergyBonuses.chainRange, bonuses.chainRange);
+    if (bonuses.chainDamageFrac) this.synergyBonuses.chainDamageFrac = Math.max(this.synergyBonuses.chainDamageFrac, bonuses.chainDamageFrac);
+    if (bonuses.dotOnHit) this.synergyBonuses.dotOnHit = Math.max(this.synergyBonuses.dotOnHit, bonuses.dotOnHit);
+    if (bonuses.dotDuration) this.synergyBonuses.dotDuration = Math.max(this.synergyBonuses.dotDuration, bonuses.dotDuration);
+    if (bonuses.dotTickRate) this.synergyBonuses.dotTickRate = Math.max(this.synergyBonuses.dotTickRate, bonuses.dotTickRate);
     if (bonuses.critChance) this.synergyBonuses.critChance = Math.max(this.synergyBonuses.critChance, bonuses.critChance);
     if (bonuses.critMult) this.synergyBonuses.critMult = Math.max(this.synergyBonuses.critMult, bonuses.critMult);
     if (bonuses.multishot) this.synergyBonuses.multishot = Math.max(this.synergyBonuses.multishot, bonuses.multishot);
     if (bonuses.executeThreshold) this.synergyBonuses.executeThreshold = Math.max(this.synergyBonuses.executeThreshold, bonuses.executeThreshold);
-    if (bonuses.burnOnHit) this.synergyBonuses.burnOnHit = Math.max(this.synergyBonuses.burnOnHit, bonuses.burnOnHit);
-    if (bonuses.burnRadius) this.synergyBonuses.burnRadius = Math.max(this.synergyBonuses.burnRadius, bonuses.burnRadius);
     if (bonuses.freezeChance) this.synergyBonuses.freezeChance = Math.max(this.synergyBonuses.freezeChance, bonuses.freezeChance);
     if (bonuses.freezeDuration) this.synergyBonuses.freezeDuration = Math.max(this.synergyBonuses.freezeDuration, bonuses.freezeDuration);
-    if (bonuses.splashOnHit) this.synergyBonuses.splashOnHit = true;
-    if (bonuses.splashRadius) this.synergyBonuses.splashRadius = Math.max(this.synergyBonuses.splashRadius, bonuses.splashRadius);
-    if (bonuses.splashFrac) this.synergyBonuses.splashFrac = Math.max(this.synergyBonuses.splashFrac, bonuses.splashFrac);
     if (bonuses.bonusGoldOnKill) this.synergyBonuses.bonusGoldOnKill += bonuses.bonusGoldOnKill;
-    if (bonuses.damageReflect) this.synergyBonuses.damageReflect = Math.max(this.synergyBonuses.damageReflect, bonuses.damageReflect);
     this.applyStats();
   }
 

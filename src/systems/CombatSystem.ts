@@ -1,5 +1,5 @@
 import { GameScene } from '../scenes/GameScene';
-import { Champion, SynergyBonusState } from '../entities/Champion';
+import { Champion } from '../entities/Champion';
 import { Enemy } from '../entities/Enemy';
 import { Projectile } from '../entities/Projectile';
 
@@ -18,8 +18,6 @@ export class CombatSystem {
       champion.sprite.y - 4,
       target,
       champion.damage,
-      champion.attackType,
-      champion.attackTypeParams,
       champion.synergyBonuses,
     );
     this.projectiles.push(projectile);
@@ -34,8 +32,6 @@ export class CombatSystem {
           champion.sprite.y - 4,
           extraTarget,
           champion.damage,
-          champion.attackType,
-          champion.attackTypeParams,
           champion.synergyBonuses,
         );
         this.projectiles.push(extra);

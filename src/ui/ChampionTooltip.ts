@@ -82,7 +82,7 @@ export class ChampionTooltip {
     this.container.add(this.baseStatsText);
 
     // Synergy bonus stats
-    this.bonusStatsText = scene.add.text(10, 130, '', { ...style, fontSize: '11px', color: '#88ff88' });
+    this.bonusStatsText = scene.add.text(10, 120, '', { ...style, fontSize: '11px', color: '#88ff88' });
     this.container.add(this.bonusStatsText);
 
     // Items container (dynamically populated)
@@ -120,7 +120,6 @@ export class ChampionTooltip {
     bg.on('pointerdown', () => {
       if (!this.champion) return;
       const gameScene = this.scene.scene.get('GameScene') as GameScene;
-      // During combat, only allow selling bench champions (not placed ones fighting)
       if (gameScene.phase === 'combat' && this.champion.placed) return;
       gameScene.sellChampion(this.champion);
       this.hide();
@@ -146,14 +145,10 @@ export class ChampionTooltip {
     const traitStr = champion.traits.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(' / ');
     this.traitsText.setText(traitStr);
 
-    // Attack type label
-    const attackTypeLabel = this.getAttackTypeLabel(champion);
-
-    // Base stats
+    // Base stats (no health)
     this.baseStatsText.setText(
       `DMG: ${champion.baseDamage}    Range: ${champion.baseRange}\n` +
-      `ATK Spd: ${champion.baseAttackSpeed.toFixed(2)}    HP: ${champion.baseHealth}` +
-      (attackTypeLabel ? `\n${attackTypeLabel}` : '')
+      `ATK Spd: ${champion.baseAttackSpeed.toFixed(2)}`
     );
 
     // Synergy bonuses (show effective stats if different from base)
@@ -167,6 +162,14 @@ export class ChampionTooltip {
     if (Math.abs(champion.attackSpeed - champion.baseAttackSpeed) > 0.01) {
       bonuses.push(`ATK Spd: ${champion.baseAttackSpeed.toFixed(2)} \u2192 ${champion.attackSpeed.toFixed(2)}`);
     }
+
+    // Show active effects from synergies
+    const effects = this.getActiveEffects(champion);
+    if (effects.length > 0) {
+      bonuses.push('');
+      bonuses.push(...effects);
+    }
+
     if (bonuses.length > 0) {
       this.bonusStatsText.setText('Synergy bonuses:\n' + bonuses.join('\n'));
       this.bonusStatsText.setVisible(true);
@@ -176,7 +179,7 @@ export class ChampionTooltip {
 
     // Items display
     this.itemsContainer.removeAll(true);
-    let itemsY = bonuses.length > 0 ? 150 : 130;
+    let itemsY = bonuses.length > 0 ? 125 + bonuses.length * 12 : 110;
     this.itemsContainer.setPosition(10, itemsY);
 
     const hasItems = champion.items.length > 0;
@@ -189,7 +192,6 @@ export class ChampionTooltip {
       for (let i = 0; i < champion.items.length; i++) {
         const item = champion.items[i];
         const name = getHeldItemName(item);
-        const color = Phaser.Display.Color.ValueToColor(getHeldItemColor(item)).rgba;
         const itemText = this.scene.add.text(0, 14 + i * 12, `  ${name}`, {
           fontSize: '9px', color: '#dddddd', fontFamily: 'monospace',
         });
@@ -199,19 +201,18 @@ export class ChampionTooltip {
 
     const itemsHeight = hasItems ? 14 + champion.items.length * 12 + 4 : 0;
 
-    // Sell button text with gold value — hide during combat
+    // Sell button
     const gameScene = this.scene.scene.get('GameScene') as GameScene;
     const isShopping = gameScene.phase === 'shopping';
-    // Show sell button during shopping, or during combat for bench-only champions
     const canSell = isShopping || !champion.placed;
     this.sellButton.setVisible(canSell);
     const sellText = this.sellButton.getByName('sellText') as Phaser.GameObjects.Text;
     sellText.setText(`SELL ${champion.getSellPrice()}g`);
 
     // Resize panel based on content
-    let neededH = bonuses.length > 0 ? 155 : 130;
-    neededH += itemsHeight;
+    let neededH = itemsY + itemsHeight;
     if (canSell) neededH += 36;
+    neededH = Math.max(neededH, 120);
     this.bg.setSize(PANEL_W, neededH);
     this.border.setSize(PANEL_W, neededH);
     this.sellButton.setPosition(PANEL_W - 80, neededH - 34);
@@ -246,26 +247,42 @@ export class ChampionTooltip {
     return this.champion;
   }
 
-  private getAttackTypeLabel(champion: Champion): string {
-    const p = champion.attackTypeParams;
-    switch (champion.attackType) {
-      case 'splash': {
-        const pct = Math.round((p.splashDamageFrac ?? 0.5) * 100);
-        return `Splash: ${pct}% dmg in ${p.splashRadius ?? 50}px`;
-      }
-      case 'slow': {
-        const pct = Math.round((1 - (p.slowAmount ?? 0.5)) * 100);
-        return `Slow: ${pct}% for ${p.slowDuration ?? 1.5}s`;
-      }
-      case 'chain': {
-        return `Chain: ${p.chainCount ?? 3} bounces`;
-      }
-      case 'dot': {
-        const total = Math.round((p.dotDamage ?? 5) * (p.dotDuration ?? 3) * (p.dotTickRate ?? 2));
-        return `Poison: ${total} dmg over ${p.dotDuration ?? 3}s`;
-      }
-      default:
-        return '';
+  private getActiveEffects(champion: Champion): string[] {
+    const s = champion.synergyBonuses;
+    const effects: string[] = [];
+    if (s.slowAmount > 0 && s.slowAmount < 1) {
+      const pct = Math.round((1 - s.slowAmount) * 100);
+      effects.push(`Slow: ${pct}% for ${s.slowDuration.toFixed(1)}s`);
     }
+    if (s.burnOnHit > 0) {
+      effects.push(`Burn: ${s.burnOnHit} dmg/tick (${s.burnRadius}px)`);
+    }
+    if (s.splashOnHit) {
+      const pct = Math.round(s.splashFrac * 100);
+      effects.push(`Splash: ${pct}% dmg (${s.splashRadius}px)`);
+    }
+    if (s.chainOnHit > 0) {
+      effects.push(`Chain: ${s.chainOnHit} bounces`);
+    }
+    if (s.dotOnHit > 0) {
+      const total = Math.round(s.dotOnHit * s.dotDuration * s.dotTickRate);
+      effects.push(`Poison: ${total} dmg over ${s.dotDuration}s`);
+    }
+    if (s.critChance > 0) {
+      effects.push(`Crit: ${Math.round(s.critChance * 100)}% (${s.critMult.toFixed(1)}x)`);
+    }
+    if (s.freezeChance > 0) {
+      effects.push(`Freeze: ${Math.round(s.freezeChance * 100)}% for ${s.freezeDuration.toFixed(1)}s`);
+    }
+    if (s.executeThreshold > 0) {
+      effects.push(`Execute below ${Math.round(s.executeThreshold * 100)}% HP`);
+    }
+    if (s.multishot > 0) {
+      effects.push(`Multishot: +${s.multishot} projectiles`);
+    }
+    if (s.bonusGoldOnKill > 0) {
+      effects.push(`+${s.bonusGoldOnKill} gold/kill`);
+    }
+    return effects;
   }
 }

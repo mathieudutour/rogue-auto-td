@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { Enemy } from './Enemy';
 import { GameScene } from '../scenes/GameScene';
-import { AttackType, AttackTypeParams } from '../data/champions';
 import { SynergyBonusState } from './Champion';
 
 const PROJECTILE_SPEED = 300; // pixels per second
@@ -12,8 +11,6 @@ export class Projectile {
   private target: Enemy;
   private damage: number;
   private alive: boolean = true;
-  private attackType: AttackType;
-  private params: AttackTypeParams;
   private synergy: SynergyBonusState;
 
   constructor(
@@ -22,36 +19,26 @@ export class Projectile {
     y: number,
     target: Enemy,
     damage: number,
-    attackType: AttackType = 'normal',
-    params: AttackTypeParams = {},
-    synergy?: SynergyBonusState,
+    synergy: SynergyBonusState,
   ) {
     this.scene = scene;
     this.target = target;
     this.damage = damage;
-    this.attackType = attackType;
-    this.params = params;
-    this.synergy = synergy || {
-      damageMult: 1, attackSpeedMult: 1, rangeMult: 1,
-      critChance: 0, critMult: 1, multishot: 0, executeThreshold: 0,
-      burnOnHit: 0, burnRadius: 0, freezeChance: 0, freezeDuration: 0,
-      splashOnHit: false, splashRadius: 0, splashFrac: 0,
-      bonusGoldOnKill: 0, damageReflect: 0,
-    };
+    this.synergy = synergy;
 
-    const textureKey = this.getTextureForType(attackType);
+    const textureKey = this.getTextureForEffects(synergy);
     this.sprite = scene.add.sprite(x, y, textureKey);
     this.sprite.setDepth(9999);
   }
 
-  private getTextureForType(type: AttackType): string {
-    switch (type) {
-      case 'splash': return 'projectile_splash';
-      case 'slow': return 'projectile_slow';
-      case 'chain': return 'projectile_chain';
-      case 'dot': return 'projectile_dot';
-      default: return 'projectile';
-    }
+  private getTextureForEffects(s: SynergyBonusState): string {
+    // Pick projectile texture based on the strongest effect
+    if (s.chainOnHit > 0) return 'projectile_chain';
+    if (s.splashOnHit) return 'projectile_splash';
+    if (s.slowAmount > 0 && s.slowAmount < 1) return 'projectile_slow';
+    if (s.dotOnHit > 0) return 'projectile_dot';
+    if (s.burnOnHit > 0) return 'projectile_dot';
+    return 'projectile';
   }
 
   update(delta: number): boolean {
@@ -87,45 +74,37 @@ export class Projectile {
     let finalDamage = this.damage;
 
     // Crit check
-    let isCrit = false;
     if (this.synergy.critChance > 0 && Math.random() < this.synergy.critChance) {
       finalDamage = Math.round(finalDamage * this.synergy.critMult);
-      isCrit = true;
       this.showCritEffect(targetPos);
     }
 
-    // Apply base attack type
-    switch (this.attackType) {
-      case 'splash':
-        this.target.takeDamage(finalDamage);
-        this.applySplash(targetPos);
-        break;
+    // Apply primary damage
+    this.target.takeDamage(finalDamage);
 
-      case 'slow':
-        this.target.takeDamage(finalDamage);
-        this.target.applySlow(
-          this.params.slowAmount ?? 0.5,
-          this.params.slowDuration ?? 1.5,
-        );
-        break;
+    // Slow on hit
+    if (this.synergy.slowAmount > 0 && this.synergy.slowAmount < 1) {
+      this.target.applySlow(this.synergy.slowAmount, this.synergy.slowDuration);
+    }
 
-      case 'chain':
-        this.target.takeDamage(finalDamage);
-        this.applyChain(this.target);
-        break;
+    // DoT on hit
+    if (this.synergy.dotOnHit > 0) {
+      this.target.applyDot(this.synergy.dotOnHit, this.synergy.dotDuration, this.synergy.dotTickRate);
+    }
 
-      case 'dot':
-        this.target.takeDamage(finalDamage);
-        this.target.applyDot(
-          this.params.dotDamage ?? 5,
-          this.params.dotDuration ?? 3,
-          this.params.dotTickRate ?? 2,
-        );
-        break;
+    // Splash damage
+    if (this.synergy.splashOnHit) {
+      this.applySplash(targetPos);
+    }
 
-      default:
-        this.target.takeDamage(finalDamage);
-        break;
+    // Chain lightning
+    if (this.synergy.chainOnHit > 0) {
+      this.applyChain(this.target);
+    }
+
+    // Burn AoE
+    if (this.synergy.burnOnHit > 0) {
+      this.applyBurnAoE(targetPos);
     }
 
     // Execute: instantly kill low HP enemies
@@ -137,21 +116,10 @@ export class Projectile {
       }
     }
 
-    // Burn AoE: apply DoT to all nearby enemies
-    if (this.synergy.burnOnHit > 0) {
-      this.applyBurnAoE(targetPos);
-    }
-
     // Freeze chance
     if (this.synergy.freezeChance > 0 && Math.random() < this.synergy.freezeChance) {
-      // Freeze = a very strong slow (0 speed) for the duration
       this.target.applySlow(0, this.synergy.freezeDuration);
       this.showFreezeEffect(targetPos);
-    }
-
-    // Synergy splash: non-splash attacks gain splash
-    if (this.synergy.splashOnHit && this.attackType !== 'splash') {
-      this.applySynergySplash(targetPos);
     }
 
     // Bonus gold on kill
@@ -163,30 +131,11 @@ export class Projectile {
   }
 
   private applySplash(center: { x: number; y: number }): void {
-    const radius = this.params.splashRadius ?? 50;
-    const frac = this.params.splashDamageFrac ?? 0.5;
-    const splashDmg = Math.round(this.damage * frac);
-
-    this.showSplashEffect(center, radius);
-
-    for (const enemy of this.scene.enemies) {
-      if (!enemy.isAlive() || enemy === this.target) continue;
-      const pos = enemy.getPosition();
-      const dx = pos.x - center.x;
-      const dy = pos.y - center.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist <= radius) {
-        enemy.takeDamage(splashDmg);
-      }
-    }
-  }
-
-  private applySynergySplash(center: { x: number; y: number }): void {
     const radius = this.synergy.splashRadius;
     const frac = this.synergy.splashFrac;
     const splashDmg = Math.round(this.damage * frac);
 
-    this.showSplashEffect(center, radius, 0x9944ff);
+    this.showSplashEffect(center, radius);
 
     for (const enemy of this.scene.enemies) {
       if (!enemy.isAlive() || enemy === this.target) continue;
@@ -219,9 +168,9 @@ export class Projectile {
   }
 
   private applyChain(firstTarget: Enemy): void {
-    const chainCount = this.params.chainCount ?? 3;
-    const chainRange = this.params.chainRange ?? 80;
-    const chainFrac = this.params.chainDamageFrac ?? 0.7;
+    const chainCount = this.synergy.chainOnHit;
+    const chainRange = this.synergy.chainRange;
+    const chainFrac = this.synergy.chainDamageFrac;
 
     let currentTarget = firstTarget;
     let currentDamage = this.damage;
