@@ -33,12 +33,12 @@ export class RunStartScene extends Phaser.Scene {
     const h = layout.height;
     const m = layout.isMobile;
 
-    // Scrollable container for mobile
-    const content = this.add.container(0, 0);
-
-    // Background — oversized to cover scroll
+    // Background — oversized to cover scroll (must be before content)
     const bgH = m ? Math.max(h, 900) : h;
     this.add.rectangle(0, 0, w, bgH, 0x0a0a1a).setOrigin(0, 0);
+
+    // Scrollable container for mobile
+    const content = this.add.container(0, 0);
 
     // ── Blessings Section ──────────────────────────
 

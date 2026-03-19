@@ -28,12 +28,12 @@ export class MetaScene extends Phaser.Scene {
     const h = layout.height;
     const m = layout.isMobile;
 
-    // Scrollable content container
-    const content = this.add.container(0, 0);
-
-    // Background
+    // Background (must be added before content so it's behind)
     const bgH = m ? Math.max(h, 850) : h;
     this.add.rectangle(0, 0, w, bgH, 0x0a0a1a).setOrigin(0, 0);
+
+    // Scrollable content container
+    const content = this.add.container(0, 0);
 
     // Title
     const titleText = this.add.text(w / 2, m ? 28 : 30, 'THE SOUL FORGE', {
