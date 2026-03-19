@@ -41,8 +41,8 @@ export class ItemPanel {
     this.container.setDepth(1000);
 
     // Label
-    this.label = scene.add.text(this.panelStartX - 2, this.panelY - (m.isMobile ? 12 : 14), 'ITEMS', {
-      fontSize: '9px',
+    this.label = scene.add.text(this.panelStartX - 2, this.panelY - (m.isMobile ? m.dpr * 12 : m.dpr * 14), 'ITEMS', {
+      fontSize: `${Math.round(9 * m.dpr)}px`,
       color: '#556677',
       fontFamily: 'monospace',
       fontStyle: 'bold',
@@ -218,22 +218,24 @@ export class ItemPanel {
     const color = getHeldItemColor(item);
     const m = this.layout;
 
-    const tipW = m.isMobile ? 140 : 170;
-    this.tooltipContainer = this.scene.add.container(x + 10, y - 44);
+    const d = m.dpr;
+    const s = (v: number) => Math.round(v * d);
+    const tipW = s(m.isMobile ? 140 : 170);
+    this.tooltipContainer = this.scene.add.container(x + s(10), y - s(44));
     this.tooltipContainer.setScrollFactor(0).setDepth(1200);
 
-    const bg = this.scene.add.rectangle(0, 0, tipW, 38, 0x111133, 0.95);
+    const bg = this.scene.add.rectangle(0, 0, tipW, s(38), 0x111133, 0.95);
     bg.setOrigin(0, 0);
-    bg.setStrokeStyle(1, color, 0.6);
+    bg.setStrokeStyle(s(1), color, 0.6);
     this.tooltipContainer.add(bg);
 
-    const nameText = this.scene.add.text(6, 4, name, {
-      fontSize: `${m.isMobile ? 9 : 10}px`, color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+    const nameText = this.scene.add.text(s(6), s(4), name, {
+      fontSize: `${s(m.isMobile ? 9 : 10)}px`, color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
     });
     this.tooltipContainer.add(nameText);
 
-    const descText = this.scene.add.text(6, 18, desc, {
-      fontSize: `${m.isMobile ? 8 : 9}px`, color: '#aabbcc', fontFamily: 'monospace',
+    const descText = this.scene.add.text(s(6), s(18), desc, {
+      fontSize: `${s(m.isMobile ? 8 : 9)}px`, color: '#aabbcc', fontFamily: 'monospace',
     });
     this.tooltipContainer.add(descText);
   }

@@ -106,12 +106,14 @@ export class UIScene extends Phaser.Scene {
 
   private createBenchUI(): void {
     const m = this.layout;
+    const d = m.dpr;
+    const s = (v: number) => Math.round(v * d);
     const totalWidth = BENCH_SIZE * (m.benchSlotSize + m.benchSlotGap) - m.benchSlotGap;
     const benchStartX = (m.width - totalWidth) / 2;
 
     // Bench label
-    const label = this.add.text(benchStartX - 2, m.benchY - (m.isMobile ? 12 : 14), 'BENCH', {
-      fontSize: `${m.isMobile ? 9 : 9}px`,
+    const label = this.add.text(benchStartX - s(2), m.benchY - s(m.isMobile ? 12 : 14), 'BENCH', {
+      fontSize: `${s(9)}px`,
       color: '#556677',
       fontFamily: 'monospace',
       fontStyle: 'bold',
@@ -134,8 +136,8 @@ export class UIScene extends Phaser.Scene {
       icon.setName('icon');
       container.add(icon);
 
-      const starText = this.add.text(m.benchSlotSize / 2, 2, '', {
-        fontSize: '8px',
+      const starText = this.add.text(m.benchSlotSize / 2, s(2), '', {
+        fontSize: `${s(8)}px`,
         color: '#ffd700',
         fontFamily: 'monospace',
         fontStyle: 'bold',
@@ -150,21 +152,23 @@ export class UIScene extends Phaser.Scene {
 
   private createSellBin(): void {
     const m = this.layout;
-    const binW = m.isMobile ? 120 : 180;
-    const binH = m.isMobile ? 36 : 50;
+    const d = m.dpr;
+    const s = (v: number) => Math.round(v * d);
+    const binW = s(m.isMobile ? 120 : 180);
+    const binH = s(m.isMobile ? 36 : 50);
 
-    this.sellBin = this.add.container(m.width / 2 - binW / 2, m.height - binH - (m.isMobile ? 10 : 20));
+    this.sellBin = this.add.container(m.width / 2 - binW / 2, m.height - binH - s(m.isMobile ? 10 : 20));
     this.sellBin.setScrollFactor(0);
     this.sellBin.setDepth(1500);
     this.sellBin.setVisible(false);
 
     this.sellBinBg = this.add.rectangle(0, 0, binW, binH, 0x661111, 0.92);
     this.sellBinBg.setOrigin(0, 0);
-    this.sellBinBg.setStrokeStyle(2, 0xcc3333, 0.8);
+    this.sellBinBg.setStrokeStyle(s(2), 0xcc3333, 0.8);
     this.sellBin.add(this.sellBinBg);
 
     this.sellBinText = this.add.text(binW / 2, binH / 2, 'SELL', {
-      fontSize: `${m.isMobile ? 12 : 16}px`,
+      fontSize: `${s(m.isMobile ? 12 : 16)}px`,
       fontFamily: 'monospace',
       fontStyle: 'bold',
       color: '#ff6666',
@@ -189,8 +193,10 @@ export class UIScene extends Phaser.Scene {
     const binX = this.sellBin.x;
     const binY = this.sellBin.y;
     const m = this.layout;
-    const binW = (m.isMobile ? 120 : 180) + 20;
-    const binH = (m.isMobile ? 36 : 50) + 10;
+    const d = m.dpr;
+    const s = (v: number) => Math.round(v * d);
+    const binW = s((m.isMobile ? 120 : 180) + 20);
+    const binH = s((m.isMobile ? 36 : 50) + 10);
     return x >= binX && x <= binX + binW && y >= binY && y <= binY + binH;
   }
 
@@ -558,6 +564,8 @@ export class UIScene extends Phaser.Scene {
   private showGameOver(wave: number, soulsEarned: number = 0): void {
     if (this.gameOverOverlay) return;
     const m = this.layout;
+    const d = m.dpr;
+    const s = (v: number) => Math.round(v * d);
     const gameScene = this.scene.get('GameScene') as GameScene;
 
     this.gameOverOverlay = this.add.container(0, 0);
@@ -568,8 +576,8 @@ export class UIScene extends Phaser.Scene {
     bg.setOrigin(0, 0);
     this.gameOverOverlay.add(bg);
 
-    const titleFs = m.isMobile ? 28 : 48;
-    const title = this.add.text(m.width / 2, m.height / 2 - 80, 'THE SHARD BREAKS', {
+    const titleFs = s(m.isMobile ? 28 : 48);
+    const title = this.add.text(m.width / 2, m.height / 2 - s(80), 'THE SHARD BREAKS', {
       fontSize: `${titleFs}px`,
       color: '#ff4444',
       fontFamily: 'monospace',
@@ -578,8 +586,8 @@ export class UIScene extends Phaser.Scene {
     title.setOrigin(0.5);
     this.gameOverOverlay.add(title);
 
-    const flavor = this.add.text(m.width / 2, m.height / 2 - 40, 'The rift overwhelms your defenses...', {
-      fontSize: `${m.isMobile ? 12 : 14}px`,
+    const flavor = this.add.text(m.width / 2, m.height / 2 - s(40), 'The rift overwhelms your defenses...', {
+      fontSize: `${s(m.isMobile ? 12 : 14)}px`,
       color: '#886666',
       fontFamily: 'monospace',
       fontStyle: 'italic',
@@ -587,8 +595,8 @@ export class UIScene extends Phaser.Scene {
     flavor.setOrigin(0.5);
     this.gameOverOverlay.add(flavor);
 
-    const info = this.add.text(m.width / 2, m.height / 2 - 10, `Defended for ${wave - 1} waves`, {
-      fontSize: `${m.isMobile ? 16 : 24}px`,
+    const info = this.add.text(m.width / 2, m.height / 2 - s(10), `Defended for ${wave - 1} waves`, {
+      fontSize: `${s(m.isMobile ? 16 : 24)}px`,
       color: '#ffffff',
       fontFamily: 'monospace',
     });
@@ -597,8 +605,8 @@ export class UIScene extends Phaser.Scene {
 
     // Souls earned
     if (soulsEarned > 0) {
-      const soulsText = this.add.text(m.width / 2, m.height / 2 + 25, `+${soulsEarned} souls absorbed`, {
-        fontSize: `${m.isMobile ? 18 : 26}px`,
+      const soulsText = this.add.text(m.width / 2, m.height / 2 + s(25), `+${soulsEarned} souls absorbed`, {
+        fontSize: `${s(m.isMobile ? 18 : 26)}px`,
         color: '#cc88ff',
         fontFamily: 'monospace',
         fontStyle: 'bold',
@@ -617,19 +625,19 @@ export class UIScene extends Phaser.Scene {
       modText += `Scars: ${curses.map(c => c.name).join(', ')}`;
     }
     if (modText) {
-      const modLabel = this.add.text(m.width / 2, m.height / 2 + (soulsEarned > 0 ? 55 : 35), modText, {
-        fontSize: `${m.isMobile ? 11 : 12}px`,
+      const modLabel = this.add.text(m.width / 2, m.height / 2 + s(soulsEarned > 0 ? 55 : 35), modText, {
+        fontSize: `${s(m.isMobile ? 11 : 12)}px`,
         color: '#667788',
         fontFamily: 'monospace',
-        wordWrap: { width: m.width - 40 },
+        wordWrap: { width: m.width - s(40) },
         align: 'center',
       });
       modLabel.setOrigin(0.5);
       this.gameOverOverlay.add(modLabel);
     }
 
-    const restart = this.add.text(m.width / 2, m.height / 2 + 90, 'Return to the Soul Forge', {
-      fontSize: `${m.isMobile ? 14 : 18}px`,
+    const restart = this.add.text(m.width / 2, m.height / 2 + s(90), 'Return to the Soul Forge', {
+      fontSize: `${s(m.isMobile ? 14 : 18)}px`,
       color: '#88ff88',
       fontFamily: 'monospace',
     });

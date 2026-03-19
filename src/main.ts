@@ -5,14 +5,27 @@ import { UIScene } from './scenes/UIScene';
 import { MetaScene } from './scenes/MetaScene';
 import { RunStartScene } from './scenes/RunStartScene';
 
+// Render at native device resolution for crisp text on HiDPI/Retina displays.
+// We make the game container physically larger (by DPR), then CSS-transform it
+// back to viewport size. Phaser's RESIZE mode picks up the larger dimensions
+// and renders a high-resolution canvas.
+const dpr = Math.min(window.devicePixelRatio || 1, 3);
+
+const container = document.getElementById('game-container')!;
+if (dpr > 1) {
+  container.style.width = `${100 * dpr}vw`;
+  container.style.height = `${100 * dpr}dvh`;
+  container.style.transform = `scale(${1 / dpr})`;
+  container.style.transformOrigin = 'top left';
+}
+
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: 'game-container',
-  width: window.innerWidth,
-  height: window.innerHeight,
+  width: window.innerWidth * dpr,
+  height: window.innerHeight * dpr,
   backgroundColor: '#1a1a2e',
   scene: [BootScene, MetaScene, RunStartScene, GameScene, UIScene],
-  autoRound: true,
   scale: {
     mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -23,23 +36,6 @@ const config: Phaser.Types.Core.GameConfig = {
   input: {
     mouse: {
       preventDefaultWheel: true,
-    },
-  },
-  callbacks: {
-    postBoot: (game) => {
-      // Render text at native device resolution for crisp text on HiDPI displays
-      const dpr = window.devicePixelRatio || 1;
-      if (dpr > 1) {
-        const origAddText = Phaser.GameObjects.GameObjectFactory.prototype.text;
-        Phaser.GameObjects.GameObjectFactory.prototype.text = function (
-          this: Phaser.GameObjects.GameObjectFactory,
-          x: number, y: number, text: string | string[], style?: Phaser.Types.GameObjects.Text.TextStyle,
-        ) {
-          const t = origAddText.call(this, x, y, text, style);
-          t.setResolution(dpr);
-          return t;
-        };
-      }
     },
   },
 };

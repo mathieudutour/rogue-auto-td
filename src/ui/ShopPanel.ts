@@ -106,27 +106,29 @@ export class ShopPanel {
       }
     } else {
       // Desktop layout: buttons left/right of cards
+      const d = m.dpr;
+      const s = (v: number) => Math.round(v * d);
       const startX = (w - totalSlotsWidth) / 2;
 
       for (let i = 0; i < 5; i++) {
         const slotX = startX + i * (slotWidth + slotGap);
-        const slotY = panelY + 14;
+        const slotY = panelY + s(14);
         const slotContainer = this.createSlotContainer(slotX, slotY, slotWidth, slotHeight, i);
         this.slotContainers.push(slotContainer);
         this.container.add(slotContainer);
       }
 
       // Left side buttons
-      const btnAreaX = startX - 110;
+      const btnAreaX = startX - s(110);
       this.buyXpButton = this.createActionButton(
-        btnAreaX, panelY + 16, 90, 42,
+        btnAreaX, panelY + s(16), s(90), s(42),
         'BUY XP', `${BUY_XP_COST}g`,
         0x6b2fa0, 0x8e44ad,
       );
       this.container.add(this.buyXpButton);
 
       this.rerollButton = this.createActionButton(
-        btnAreaX, panelY + 68, 90, 42,
+        btnAreaX, panelY + s(68), s(90), s(42),
         'REROLL', `${REROLL_COST}g`,
         0x1a6b9b, 0x2980b9,
       );
@@ -134,7 +136,7 @@ export class ShopPanel {
 
       // Start wave button — right side
       this.startButton = this.createStartButton(
-        startX + totalSlotsWidth + 14, panelY + 30, 90, 68,
+        startX + totalSlotsWidth + s(14), panelY + s(30), s(90), s(68),
       );
       this.container.add(this.startButton);
     }
@@ -143,11 +145,13 @@ export class ShopPanel {
   private createSlotContainer(x: number, y: number, width: number, height: number, index: number): Phaser.GameObjects.Container {
     const container = this.scene.add.container(x, y);
     const m = this.layout;
+    const d = m.dpr;
+    const s = (v: number) => Math.round(v * d);
 
     // Card background — full card is the portrait area
     const card = this.scene.add.rectangle(0, 0, width, height, 0x1a1a28, 1);
     card.setOrigin(0, 0);
-    card.setStrokeStyle(m.isMobile ? 1 : 2, 0x333355, 0.8);
+    card.setStrokeStyle(m.isMobile ? 1 : s(2), 0x333355, 0.8);
     card.setName('card');
     container.add(card);
 
@@ -160,14 +164,14 @@ export class ShopPanel {
     container.add(portrait);
 
     // Cost badge (top-left corner, on top of portrait)
-    const badgeSize = m.isMobile ? 16 : 20;
+    const badgeSize = s(m.isMobile ? 16 : 20);
     const costBadge = this.scene.add.rectangle(0, 0, badgeSize, badgeSize, 0x888888, 1);
     costBadge.setOrigin(0, 0);
     costBadge.setName('costBadge');
     container.add(costBadge);
 
     const costText = this.scene.add.text(badgeSize / 2, badgeSize / 2, '', {
-      fontSize: `${m.isMobile ? 10 : 12}px`,
+      fontSize: `${s(m.isMobile ? 10 : 12)}px`,
       color: '#ffffff',
       fontFamily: 'monospace',
       fontStyle: 'bold',
@@ -177,15 +181,15 @@ export class ShopPanel {
     container.add(costText);
 
     // Name banner at bottom — dark overlay strip
-    const bannerH = m.isMobile ? 26 : 32;
+    const bannerH = s(m.isMobile ? 26 : 32);
     const banner = this.scene.add.rectangle(0, height - bannerH, width, bannerH, 0x000000, 0.7);
     banner.setOrigin(0, 0);
     banner.setName('banner');
     container.add(banner);
 
     // Name text — centered in banner
-    const nameText = this.scene.add.text(width / 2, height - bannerH + (m.isMobile ? 5 : 6), '', {
-      fontSize: `${m.isMobile ? 10 : 11}px`,
+    const nameText = this.scene.add.text(width / 2, height - bannerH + s(m.isMobile ? 5 : 6), '', {
+      fontSize: `${s(m.isMobile ? 10 : 11)}px`,
       color: '#ffffff',
       fontFamily: 'monospace',
       fontStyle: 'bold',
@@ -196,8 +200,8 @@ export class ShopPanel {
     container.add(nameText);
 
     // Traits text — below name in the banner
-    const traitText = this.scene.add.text(width / 2, height - bannerH + (m.isMobile ? 16 : 19), '', {
-      fontSize: `${m.isMobile ? 8 : 9}px`,
+    const traitText = this.scene.add.text(width / 2, height - bannerH + s(m.isMobile ? 16 : 19), '', {
+      fontSize: `${s(m.isMobile ? 8 : 9)}px`,
       color: '#aaaacc',
       fontFamily: 'monospace',
       align: 'center',
@@ -207,8 +211,8 @@ export class ShopPanel {
     container.add(traitText);
 
     // Owned indicator (top-right) — shows how many copies you have
-    const ownedText = this.scene.add.text(width - 3, 2, '', {
-      fontSize: `${m.isMobile ? 9 : 10}px`,
+    const ownedText = this.scene.add.text(width - s(3), s(2), '', {
+      fontSize: `${s(m.isMobile ? 9 : 10)}px`,
       color: '#44ff88',
       fontFamily: 'monospace',
       fontStyle: 'bold',
@@ -301,7 +305,7 @@ export class ShopPanel {
       container.add(arrow);
 
       const text = this.scene.add.text(w / 2, h / 2 + 14, 'START', {
-        fontSize: '12px',
+        fontSize: `${this.layout.shopFontSize}px`,
         color: '#44ff66',
         fontFamily: 'monospace',
         fontStyle: 'bold',

@@ -3,15 +3,15 @@ import { Champion } from '../entities/Champion';
 import { COLORS, TRAIT_COLORS } from '../utils/constants';
 import { GameScene } from '../scenes/GameScene';
 import { getHeldItemName, getHeldItemColor, getHeldItemDescription, MAX_ITEMS_PER_CHAMPION } from '../data/items';
-import { getLayout } from '../utils/responsive';
-
-const PANEL_W = 220;
-const PANEL_H = 200;
+import { getLayout, getDpr } from '../utils/responsive';
 
 export class ChampionTooltip {
   private scene: Phaser.Scene;
   private container: Phaser.GameObjects.Container;
   private champion: Champion | null = null;
+  private panelW: number;
+  private panelH: number;
+  private dpr: number;
 
   // Elements
   private bg: Phaser.GameObjects.Rectangle;
@@ -28,65 +28,73 @@ export class ChampionTooltip {
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
+    this.dpr = getDpr();
+    const d = this.dpr;
+    const s = (v: number) => Math.round(v * d);
+    this.panelW = s(220);
+    this.panelH = s(200);
+    const PW = this.panelW;
+    const PH = this.panelH;
+
     this.container = scene.add.container(0, 0);
     this.container.setScrollFactor(0);
     this.container.setDepth(1100);
     this.container.setVisible(false);
 
     const style: Phaser.Types.GameObjects.Text.TextStyle = {
-      fontSize: '13px',
+      fontSize: `${s(13)}px`,
       fontFamily: 'monospace',
       color: '#ffffff',
     };
 
     // Background
-    this.bg = scene.add.rectangle(0, 0, PANEL_W, PANEL_H, 0x111133, 0.95);
+    this.bg = scene.add.rectangle(0, 0, PW, PH, 0x111133, 0.95);
     this.bg.setOrigin(0, 0);
     this.container.add(this.bg);
 
-    this.border = scene.add.rectangle(0, 0, PANEL_W, PANEL_H);
+    this.border = scene.add.rectangle(0, 0, PW, PH);
     this.border.setOrigin(0, 0);
-    this.border.setStrokeStyle(2, 0x4444aa, 1);
+    this.border.setStrokeStyle(s(2), 0x4444aa, 1);
     this.border.setFillStyle(0x000000, 0);
     this.container.add(this.border);
 
     // Portrait
-    this.portrait = scene.add.sprite(24, 28, 'champion_default');
-    this.portrait.setScale(1.6);
+    this.portrait = scene.add.sprite(s(24), s(28), 'champion_default');
+    this.portrait.setScale(1.6 * d);
     this.container.add(this.portrait);
 
     // Name
-    this.nameText = scene.add.text(46, 10, '', { ...style, fontSize: '15px', fontStyle: 'bold', color: '#ffffff' });
+    this.nameText = scene.add.text(s(46), s(10), '', { ...style, fontSize: `${s(15)}px`, fontStyle: 'bold', color: '#ffffff' });
     this.container.add(this.nameText);
 
     // Stars
-    this.starText = scene.add.text(46, 30, '', { ...style, fontSize: '14px', color: '#ffd700' });
+    this.starText = scene.add.text(s(46), s(30), '', { ...style, fontSize: `${s(14)}px`, color: '#ffd700' });
     this.container.add(this.starText);
 
     // Cost
-    this.costText = scene.add.text(PANEL_W - 10, 10, '', { ...style, fontSize: '14px', color: '#ffd700' });
+    this.costText = scene.add.text(PW - s(10), s(10), '', { ...style, fontSize: `${s(14)}px`, color: '#ffd700' });
     this.costText.setOrigin(1, 0);
     this.container.add(this.costText);
 
     // Divider line
-    const divider = scene.add.rectangle(10, 48, PANEL_W - 20, 1, 0x4444aa, 0.6);
+    const divider = scene.add.rectangle(s(10), s(48), PW - s(20), s(1), 0x4444aa, 0.6);
     divider.setOrigin(0, 0);
     this.container.add(divider);
 
     // Traits
-    this.traitsText = scene.add.text(10, 56, '', { ...style, fontSize: '12px', color: '#aaaacc' });
+    this.traitsText = scene.add.text(s(10), s(56), '', { ...style, fontSize: `${s(12)}px`, color: '#aaaacc' });
     this.container.add(this.traitsText);
 
     // Base stats
-    this.baseStatsText = scene.add.text(10, 78, '', { ...style, fontSize: '12px', color: '#cccccc' });
+    this.baseStatsText = scene.add.text(s(10), s(78), '', { ...style, fontSize: `${s(12)}px`, color: '#cccccc' });
     this.container.add(this.baseStatsText);
 
     // Synergy bonus stats
-    this.bonusStatsText = scene.add.text(10, 120, '', { ...style, fontSize: '11px', color: '#88ff88' });
+    this.bonusStatsText = scene.add.text(s(10), s(120), '', { ...style, fontSize: `${s(11)}px`, color: '#88ff88' });
     this.container.add(this.bonusStatsText);
 
     // Items container (dynamically populated)
-    this.itemsContainer = scene.add.container(10, 160);
+    this.itemsContainer = scene.add.container(s(10), s(160));
     this.container.add(this.itemsContainer);
 
     // Sell button
@@ -95,17 +103,19 @@ export class ChampionTooltip {
   }
 
   private createSellButton(): Phaser.GameObjects.Container {
-    const btnW = 70;
-    const btnH = 26;
-    const container = this.scene.add.container(PANEL_W - btnW - 10, PANEL_H - btnH - 8);
+    const d = this.dpr;
+    const s = (v: number) => Math.round(v * d);
+    const btnW = s(70);
+    const btnH = s(26);
+    const container = this.scene.add.container(this.panelW - btnW - s(10), this.panelH - btnH - s(8));
 
     const bg = this.scene.add.rectangle(0, 0, btnW, btnH, 0xaa3333, 1);
     bg.setOrigin(0, 0);
-    bg.setStrokeStyle(1, 0xff4444, 0.5);
+    bg.setStrokeStyle(s(1), 0xff4444, 0.5);
     container.add(bg);
 
     const text = this.scene.add.text(btnW / 2, btnH / 2, 'SELL', {
-      fontSize: '12px',
+      fontSize: `${s(12)}px`,
       fontFamily: 'monospace',
       color: '#ffffff',
       fontStyle: 'bold',
@@ -180,28 +190,30 @@ export class ChampionTooltip {
     this.bonusStatsText.setVisible(true);
 
     // Items display
+    const d = this.dpr;
+    const s = (v: number) => Math.round(v * d);
     this.itemsContainer.removeAll(true);
-    let itemsY = bonuses.length > 0 ? 125 + bonuses.length * 12 : 110;
-    this.itemsContainer.setPosition(10, itemsY);
+    let itemsY = bonuses.length > 0 ? s(125) + bonuses.length * s(12) : s(110);
+    this.itemsContainer.setPosition(s(10), itemsY);
 
     const hasItems = champion.items.length > 0;
     if (hasItems) {
       const itemLabel = this.scene.add.text(0, 0, `Items (${champion.items.length}/${MAX_ITEMS_PER_CHAMPION}):`, {
-        fontSize: '10px', color: '#ccaa44', fontFamily: 'monospace', fontStyle: 'bold',
+        fontSize: `${s(10)}px`, color: '#ccaa44', fontFamily: 'monospace', fontStyle: 'bold',
       });
       this.itemsContainer.add(itemLabel);
 
       for (let i = 0; i < champion.items.length; i++) {
         const item = champion.items[i];
         const name = getHeldItemName(item);
-        const itemText = this.scene.add.text(0, 14 + i * 12, `  ${name}`, {
-          fontSize: '9px', color: '#dddddd', fontFamily: 'monospace',
+        const itemText = this.scene.add.text(0, s(14) + i * s(12), `  ${name}`, {
+          fontSize: `${s(9)}px`, color: '#dddddd', fontFamily: 'monospace',
         });
         this.itemsContainer.add(itemText);
       }
     }
 
-    const itemsHeight = hasItems ? 14 + champion.items.length * 12 + 4 : 0;
+    const itemsHeight = hasItems ? s(14) + champion.items.length * s(12) + s(4) : 0;
 
     // Sell button
     const gameScene = this.scene.scene.get('GameScene') as GameScene;
@@ -213,23 +225,23 @@ export class ChampionTooltip {
 
     // Resize panel based on content
     let neededH = itemsY + itemsHeight;
-    if (canSell) neededH += 36;
-    neededH = Math.max(neededH, 120);
-    this.bg.setSize(PANEL_W, neededH);
-    this.border.setSize(PANEL_W, neededH);
-    this.sellButton.setPosition(PANEL_W - 80, neededH - 34);
+    if (canSell) neededH += s(36);
+    neededH = Math.max(neededH, s(120));
+    this.bg.setSize(this.panelW, neededH);
+    this.border.setSize(this.panelW, neededH);
+    this.sellButton.setPosition(this.panelW - s(80), neededH - s(34));
 
     // Position: prefer right side of champion, avoid edges
     const layout = getLayout(this.scene.scale.width, this.scene.scale.height);
-    const margin = layout.isMobile ? 10 : 20;
+    const margin = s(layout.isMobile ? 10 : 20);
     let x = screenX + margin;
     let y = screenY - neededH / 2;
-    if (x + PANEL_W > this.scene.scale.width) x = screenX - PANEL_W - margin;
-    if (x < 4) x = 4;
-    const topBound = layout.hudHeight + 4;
+    if (x + this.panelW > this.scene.scale.width) x = screenX - this.panelW - margin;
+    if (x < s(4)) x = s(4);
+    const topBound = layout.hudHeight + s(4);
     if (y < topBound) y = topBound;
-    if (y + neededH > this.scene.scale.height - layout.shopPanelHeight - 40) {
-      y = this.scene.scale.height - layout.shopPanelHeight - 40 - neededH;
+    if (y + neededH > this.scene.scale.height - layout.shopPanelHeight - s(40)) {
+      y = this.scene.scale.height - layout.shopPanelHeight - s(40) - neededH;
     }
 
     this.container.setPosition(x, y);

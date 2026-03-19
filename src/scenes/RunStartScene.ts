@@ -32,9 +32,13 @@ export class RunStartScene extends Phaser.Scene {
     const w = layout.width;
     const h = layout.height;
     const m = layout.isMobile;
+    const d = layout.dpr;
+
+    // Helper: scale a CSS value to game pixels
+    const s = (v: number) => Math.round(v * d);
 
     // Background — oversized to cover scroll (must be before content)
-    const bgH = m ? Math.max(h, 900) : h;
+    const bgH = m ? Math.max(h, s(900)) : h;
     this.add.rectangle(0, 0, w, bgH, 0x0a0a1a).setOrigin(0, 0);
 
     // Scrollable container for mobile
@@ -42,17 +46,17 @@ export class RunStartScene extends Phaser.Scene {
 
     // ── Blessings Section ──────────────────────────
 
-    const titleY = m ? 24 : 25;
+    const titleY = s(m ? 24 : 25);
     const title = this.add.text(w / 2, titleY, 'ECHOES OF THE SPIRE', {
-      fontSize: `${m ? 24 : 26}px`,
+      fontSize: `${s(m ? 24 : 26)}px`,
       color: '#88ff88',
       fontFamily: 'monospace',
       fontStyle: 'bold',
     }).setOrigin(0.5, 0);
     content.add(title);
 
-    const subtitle = this.add.text(w / 2, titleY + (m ? 30 : 32), 'Choose a blessing for this rift', {
-      fontSize: `${m ? 13 : 12}px`,
+    const subtitle = this.add.text(w / 2, titleY + s(m ? 30 : 32), 'Choose a blessing for this rift', {
+      fontSize: `${s(m ? 13 : 12)}px`,
       color: '#557755',
       fontFamily: 'monospace',
       fontStyle: 'italic',
@@ -63,9 +67,9 @@ export class RunStartScene extends Phaser.Scene {
     this.blessingChoices = this.rollBlessings(3);
 
     // Mobile: vertical stack; Desktop: horizontal
-    const cardW = m ? Math.min(w - 40, 340) : Math.min((w - 60) / 3, 200);
-    const cardH = m ? 80 : 140;
-    const cardStartY = titleY + (m ? 56 : 50);
+    const cardW = m ? Math.min(w - s(40), s(340)) : Math.min((w - s(60)) / 3, s(200));
+    const cardH = s(m ? 80 : 140);
+    const cardStartY = titleY + s(m ? 56 : 50);
 
     this.blessingCards = [];
     for (let i = 0; i < 3; i++) {
@@ -75,10 +79,10 @@ export class RunStartScene extends Phaser.Scene {
       if (m) {
         // Vertical stack centered
         x = (w - cardW) / 2;
-        y = cardStartY + i * (cardH + 10);
+        y = cardStartY + i * (cardH + s(10));
       } else {
-        const totalW = cardW * 3 + 20;
-        x = (w - totalW) / 2 + i * (cardW + 10);
+        const totalW = cardW * 3 + s(20);
+        x = (w - totalW) / 2 + i * (cardW + s(10));
         y = cardStartY;
       }
 
@@ -88,13 +92,13 @@ export class RunStartScene extends Phaser.Scene {
                            blessing.rarity === 'rare' ? 0x4488ff : 0x44aa44;
       const bg = this.add.rectangle(0, 0, cardW, cardH, 0x151530, 0.95);
       bg.setOrigin(0, 0);
-      bg.setStrokeStyle(2, rarityColor, 0.8);
+      bg.setStrokeStyle(s(2), rarityColor, 0.8);
       bg.setName('bg');
       container.add(bg);
 
       // Rarity label
-      const rarityLabel = this.add.text(m ? 12 : cardW / 2, m ? 8 : 8, blessing.rarity.toUpperCase(), {
-        fontSize: `${m ? 11 : 10}px`,
+      const rarityLabel = this.add.text(m ? s(12) : cardW / 2, s(8), blessing.rarity.toUpperCase(), {
+        fontSize: `${s(m ? 11 : 10)}px`,
         color: `#${rarityColor.toString(16).padStart(6, '0')}`,
         fontFamily: 'monospace',
         fontStyle: 'bold',
@@ -102,22 +106,22 @@ export class RunStartScene extends Phaser.Scene {
       container.add(rarityLabel);
 
       // Name
-      const nameText = this.add.text(m ? 12 : cardW / 2, m ? 26 : 30, blessing.name, {
-        fontSize: `${m ? 16 : 14}px`,
+      const nameText = this.add.text(m ? s(12) : cardW / 2, s(m ? 26 : 30), blessing.name, {
+        fontSize: `${s(m ? 16 : 14)}px`,
         color: '#ffffff',
         fontFamily: 'monospace',
         fontStyle: 'bold',
-        wordWrap: { width: cardW - 24 },
+        wordWrap: { width: cardW - s(24) },
         align: m ? 'left' : 'center',
       }).setOrigin(m ? 0 : 0.5, 0);
       container.add(nameText);
 
       // Description
-      const descText = this.add.text(m ? 12 : cardW / 2, m ? 50 : 55, blessing.description, {
-        fontSize: `${m ? 14 : 11}px`,
+      const descText = this.add.text(m ? s(12) : cardW / 2, s(m ? 50 : 55), blessing.description, {
+        fontSize: `${s(m ? 14 : 11)}px`,
         color: '#aaccaa',
         fontFamily: 'monospace',
-        wordWrap: { width: cardW - 24 },
+        wordWrap: { width: cardW - s(24) },
         align: m ? 'left' : 'center',
       }).setOrigin(m ? 0 : 0.5, 0);
       container.add(descText);
@@ -141,20 +145,20 @@ export class RunStartScene extends Phaser.Scene {
 
     // ── Curses Section ─────────────────────────────
 
-    const cardsEndY = m ? cardStartY + 3 * (cardH + 10) : cardStartY + cardH;
-    const curseY = cardsEndY + (m ? 10 : 35);
+    const cardsEndY = m ? cardStartY + 3 * (cardH + s(10)) : cardStartY + cardH;
+    const curseY = cardsEndY + s(m ? 10 : 35);
     const curseTitle = this.add.text(w / 2, curseY, m ? 'RIFT SCARS (bonus souls)' : 'RIFT SCARS (embrace the void for more souls)', {
-      fontSize: `${m ? 18 : 16}px`,
+      fontSize: `${s(m ? 18 : 16)}px`,
       color: '#ff6666',
       fontFamily: 'monospace',
       fontStyle: 'bold',
     }).setOrigin(0.5, 0);
     content.add(curseTitle);
 
-    const curseRowH = m ? 44 : 40;
-    const curseW = Math.min(w - 24, 500);
+    const curseRowH = s(m ? 44 : 40);
+    const curseW = Math.min(w - s(24), s(500));
     const curseX = (w - curseW) / 2;
-    const curseStartY = curseY + (m ? 32 : 30);
+    const curseStartY = curseY + s(m ? 32 : 30);
 
     this.curseToggles = [];
     for (let i = 0; i < CURSES.length; i++) {
@@ -162,33 +166,33 @@ export class RunStartScene extends Phaser.Scene {
       const y = curseStartY + i * curseRowH;
       const container = this.add.container(curseX, y);
 
-      const bg = this.add.rectangle(0, 0, curseW, curseRowH - 4, 0x201010, 0.9);
+      const bg = this.add.rectangle(0, 0, curseW, curseRowH - s(4), 0x201010, 0.9);
       bg.setOrigin(0, 0);
-      bg.setStrokeStyle(1, 0x553333, 0.6);
+      bg.setStrokeStyle(s(1), 0x553333, 0.6);
       bg.setName('bg');
       container.add(bg);
 
       // Toggle box
-      const boxSize = m ? 20 : 18;
-      const box = this.add.rectangle(10, (curseRowH - 4) / 2, boxSize, boxSize, 0x331111);
+      const boxSize = s(m ? 20 : 18);
+      const box = this.add.rectangle(s(10), (curseRowH - s(4)) / 2, boxSize, boxSize, 0x331111);
       box.setOrigin(0, 0.5);
-      box.setStrokeStyle(1, 0x664444, 0.8);
+      box.setStrokeStyle(s(1), 0x664444, 0.8);
       box.setName('box');
       container.add(box);
 
       // Name & desc
-      const text = this.add.text(m ? 38 : 34, (curseRowH - 4) / 2, `${curse.name}: ${curse.description}`, {
-        fontSize: `${m ? 13 : 12}px`,
+      const text = this.add.text(s(m ? 38 : 34), (curseRowH - s(4)) / 2, `${curse.name}: ${curse.description}`, {
+        fontSize: `${s(m ? 13 : 12)}px`,
         color: '#cc8888',
         fontFamily: 'monospace',
-        wordWrap: { width: curseW - (m ? 120 : 140) },
+        wordWrap: { width: curseW - s(m ? 120 : 140) },
       }).setOrigin(0, 0.5);
       container.add(text);
 
       // Multiplier
-      const multText = this.add.text(curseW - 10, (curseRowH - 4) / 2,
+      const multText = this.add.text(curseW - s(10), (curseRowH - s(4)) / 2,
         `+${Math.round((curse.soulMultiplier - 1) * 100)}%`, {
-        fontSize: `${m ? 14 : 12}px`,
+        fontSize: `${s(m ? 14 : 12)}px`,
         color: '#ffaa44',
         fontFamily: 'monospace',
         fontStyle: 'bold',
@@ -203,9 +207,9 @@ export class RunStartScene extends Phaser.Scene {
     }
 
     // Soul multiplier display
-    const multY = curseStartY + CURSES.length * curseRowH + (m ? 8 : 12);
+    const multY = curseStartY + CURSES.length * curseRowH + s(m ? 8 : 12);
     this.multiplierText = this.add.text(w / 2, multY, '', {
-      fontSize: `${m ? 16 : 14}px`,
+      fontSize: `${s(m ? 16 : 14)}px`,
       color: '#ffcc44',
       fontFamily: 'monospace',
       fontStyle: 'bold',
@@ -213,16 +217,16 @@ export class RunStartScene extends Phaser.Scene {
     content.add(this.multiplierText);
 
     // Begin Run button
-    const beginY = multY + (m ? 36 : 45);
-    const beginW = m ? 220 : 220;
-    const beginH = m ? 52 : 50;
+    const beginY = multY + s(m ? 36 : 45);
+    const beginW = s(220);
+    const beginH = s(m ? 52 : 50);
     const beginBtn = this.add.rectangle(w / 2, beginY, beginW, beginH, 0x224488, 0.95);
-    beginBtn.setStrokeStyle(2, 0x4488ff, 0.8);
+    beginBtn.setStrokeStyle(s(2), 0x4488ff, 0.8);
     beginBtn.setInteractive({ useHandCursor: true });
     content.add(beginBtn);
 
     const beginText = this.add.text(w / 2, beginY, 'BEGIN RUN', {
-      fontSize: `${m ? 22 : 22}px`,
+      fontSize: `${s(22)}px`,
       color: '#88ccff',
       fontFamily: 'monospace',
       fontStyle: 'bold',
@@ -234,9 +238,9 @@ export class RunStartScene extends Phaser.Scene {
     beginBtn.on('pointerout', () => beginBtn.setFillStyle(0x224488, 0.95));
 
     // Skip blessing button
-    const skipY = beginY + beginH / 2 + (m ? 18 : 20);
+    const skipY = beginY + beginH / 2 + s(m ? 18 : 20);
     const skipText = this.add.text(w / 2, skipY, 'Skip (no blessing)', {
-      fontSize: `${m ? 14 : 12}px`,
+      fontSize: `${s(m ? 14 : 12)}px`,
       color: '#556677',
       fontFamily: 'monospace',
     }).setOrigin(0.5, 0);
@@ -249,11 +253,11 @@ export class RunStartScene extends Phaser.Scene {
 
     // Mobile scroll support — drag to scroll the content container
     if (m) {
-      const totalContentH = skipY + 40;
+      const totalContentH = skipY + s(40);
       if (totalContentH > h) {
         let dragStartY = 0;
         let contentStartY = 0;
-        const maxScroll = -(totalContentH - h + 20);
+        const maxScroll = -(totalContentH - h + s(20));
 
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
           dragStartY = pointer.y;

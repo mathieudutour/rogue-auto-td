@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { TRAIT_COLORS } from '../utils/constants';
 import { ActiveSynergy } from '../systems/SynergyManager';
 import { SynergyData } from '../data/synergies';
-import { getLayout } from '../utils/responsive';
+import { getLayout, getDpr } from '../utils/responsive';
 
 export class SynergyBar {
   private scene: Phaser.Scene;
@@ -12,6 +12,7 @@ export class SynergyBar {
   private fontSize: number;
   private pillWidth: number;
   private spacing: number;
+  private dpr: number;
 
   // Tooltip
   private tooltipContainer: Phaser.GameObjects.Container;
@@ -23,6 +24,7 @@ export class SynergyBar {
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
     const layout = getLayout(scene.scale.width, scene.scale.height);
+    this.dpr = layout.dpr;
     this.isMobile = layout.isMobile;
     this.fontSize = layout.synergyFontSize;
     this.pillWidth = layout.synergyPillWidth;
@@ -39,13 +41,14 @@ export class SynergyBar {
     this.tooltipContainer.setDepth(1200);
     this.tooltipContainer.setVisible(false);
 
-    this.tooltipBg = scene.add.rectangle(0, 0, 240, 100, 0x111133, 0.95);
+    const s = (v: number) => Math.round(v * this.dpr);
+    this.tooltipBg = scene.add.rectangle(0, 0, s(240), s(100), 0x111133, 0.95);
     this.tooltipBg.setOrigin(0, 0);
     this.tooltipContainer.add(this.tooltipBg);
 
-    this.tooltipBorder = scene.add.rectangle(0, 0, 240, 100);
+    this.tooltipBorder = scene.add.rectangle(0, 0, s(240), s(100));
     this.tooltipBorder.setOrigin(0, 0);
-    this.tooltipBorder.setStrokeStyle(2, 0x4444aa, 1);
+    this.tooltipBorder.setStrokeStyle(s(2), 0x4444aa, 1);
     this.tooltipBorder.setFillStyle(0x000000, 0);
     this.tooltipContainer.add(this.tooltipBorder);
   }
@@ -138,29 +141,31 @@ export class SynergyBar {
     for (const t of this.tooltipTexts) t.destroy();
     this.tooltipTexts = [];
 
+    const d = this.dpr;
+    const s = (v: number) => Math.round(v * d);
     const data = synergy.synergy;
     const color = TRAIT_COLORS[data.id] || 0xcccccc;
     const colorHex = '#' + color.toString(16).padStart(6, '0');
 
-    const padX = 10;
-    let cy = 8;
+    const padX = s(10);
+    let cy = s(8);
 
     // Title
     const title = this.scene.add.text(padX, cy, data.name, {
-      fontSize: '14px', fontFamily: 'monospace', fontStyle: 'bold', color: colorHex,
+      fontSize: `${s(14)}px`, fontFamily: 'monospace', fontStyle: 'bold', color: colorHex,
     });
     this.tooltipContainer.add(title);
     this.tooltipTexts.push(title);
-    cy += 18;
+    cy += s(18);
 
     // Description
     const desc = this.scene.add.text(padX, cy, data.description, {
-      fontSize: '10px', fontFamily: 'monospace', color: '#aaaacc',
-      wordWrap: { width: 220 },
+      fontSize: `${s(10)}px`, fontFamily: 'monospace', color: '#aaaacc',
+      wordWrap: { width: s(220) },
     });
     this.tooltipContainer.add(desc);
     this.tooltipTexts.push(desc);
-    cy += desc.height + 8;
+    cy += desc.height + s(8);
 
     // Tiers
     for (const tier of data.tiers) {
@@ -168,41 +173,41 @@ export class SynergyBar {
       const hasEnough = synergy.count >= tier.count;
 
       const tierLabel = this.scene.add.text(padX, cy, `(${tier.count})`, {
-        fontSize: '10px', fontFamily: 'monospace',
+        fontSize: `${s(10)}px`, fontFamily: 'monospace',
         color: isThisActive ? '#ffdd44' : hasEnough ? '#88ff88' : '#667788',
         fontStyle: isThisActive ? 'bold' : 'normal',
       });
       this.tooltipContainer.add(tierLabel);
       this.tooltipTexts.push(tierLabel);
 
-      const tierDesc = this.scene.add.text(padX + 28, cy, tier.description, {
-        fontSize: '10px', fontFamily: 'monospace',
+      const tierDesc = this.scene.add.text(padX + s(28), cy, tier.description, {
+        fontSize: `${s(10)}px`, fontFamily: 'monospace',
         color: isThisActive ? '#ffffff' : hasEnough ? '#cccccc' : '#556677',
-        wordWrap: { width: 192 },
+        wordWrap: { width: s(192) },
       });
       this.tooltipContainer.add(tierDesc);
       this.tooltipTexts.push(tierDesc);
-      cy += Math.max(tierDesc.height, 14) + 4;
+      cy += Math.max(tierDesc.height, s(14)) + s(4);
     }
 
-    cy += 4;
+    cy += s(4);
 
     // Resize tooltip
-    const tooltipW = 240;
+    const tooltipW = s(240);
     this.tooltipBg.setSize(tooltipW, cy);
     this.tooltipBorder.setSize(tooltipW, cy);
-    this.tooltipBorder.setStrokeStyle(2, color, 0.6);
+    this.tooltipBorder.setStrokeStyle(s(2), color, 0.6);
 
     // Position tooltip to the right of the synergy bar
     const barX = this.container.x;
     const barY = this.container.y;
-    const tooltipX = barX + this.pillWidth + 6;
+    const tooltipX = barX + this.pillWidth + s(6);
     let tooltipY = barY + entryY;
 
     // Ensure it stays on screen
-    const maxY = this.scene.scale.height - cy - 10;
+    const maxY = this.scene.scale.height - cy - s(10);
     if (tooltipY > maxY) tooltipY = maxY;
-    if (tooltipY < 4) tooltipY = 4;
+    if (tooltipY < s(4)) tooltipY = s(4);
 
     this.tooltipContainer.setPosition(tooltipX, tooltipY);
     this.tooltipContainer.setVisible(true);

@@ -27,17 +27,21 @@ export class MetaScene extends Phaser.Scene {
     const w = layout.width;
     const h = layout.height;
     const m = layout.isMobile;
+    const d = layout.dpr;
+
+    // Helper: scale a CSS value to game pixels
+    const s = (v: number) => Math.round(v * d);
 
     // Background (must be added before content so it's behind)
-    const bgH = m ? Math.max(h, 850) : h;
+    const bgH = m ? Math.max(h, s(850)) : h;
     this.add.rectangle(0, 0, w, bgH, 0x0a0a1a).setOrigin(0, 0);
 
     // Scrollable content container
     const content = this.add.container(0, 0);
 
     // Title
-    const titleText = this.add.text(w / 2, m ? 28 : 30, 'THE SOUL FORGE', {
-      fontSize: `${m ? 28 : 32}px`,
+    const titleText = this.add.text(w / 2, s(m ? 28 : 30), 'THE SOUL FORGE', {
+      fontSize: `${s(m ? 28 : 32)}px`,
       color: '#cc88ff',
       fontFamily: 'monospace',
       fontStyle: 'bold',
@@ -45,8 +49,8 @@ export class MetaScene extends Phaser.Scene {
     content.add(titleText);
 
     // Flavor text
-    const flavor = this.add.text(w / 2, m ? 58 : 62, 'Temper your power between rifts', {
-      fontSize: `${m ? 12 : 12}px`,
+    const flavor = this.add.text(w / 2, s(m ? 58 : 62), 'Temper your power between rifts', {
+      fontSize: `${s(12)}px`,
       color: '#776699',
       fontFamily: 'monospace',
       fontStyle: 'italic',
@@ -54,8 +58,8 @@ export class MetaScene extends Phaser.Scene {
     content.add(flavor);
 
     // Souls display
-    this.soulsText = this.add.text(w / 2, m ? 74 : 80, '', {
-      fontSize: `${m ? 22 : 22}px`,
+    this.soulsText = this.add.text(w / 2, s(m ? 74 : 80), '', {
+      fontSize: `${s(22)}px`,
       color: '#ffcc44',
       fontFamily: 'monospace',
       fontStyle: 'bold',
@@ -63,17 +67,17 @@ export class MetaScene extends Phaser.Scene {
     content.add(this.soulsText);
 
     // Stats
-    this.statsText = this.add.text(w / 2, m ? 102 : 108, '', {
-      fontSize: `${m ? 13 : 13}px`,
+    this.statsText = this.add.text(w / 2, s(m ? 102 : 108), '', {
+      fontSize: `${s(13)}px`,
       color: '#667788',
       fontFamily: 'monospace',
     }).setOrigin(0.5, 0);
     content.add(this.statsText);
 
     // Upgrades list
-    const startY = m ? 130 : 140;
-    const rowH = m ? 62 : 56;
-    const panelW = Math.min(w - 20, 600);
+    const startY = s(m ? 130 : 140);
+    const rowH = s(m ? 62 : 56);
+    const panelW = Math.min(w - s(20), s(600));
     const panelX = (w - panelW) / 2;
 
     this.upgradeRows = [];
@@ -84,14 +88,14 @@ export class MetaScene extends Phaser.Scene {
       const container = this.add.container(panelX, y);
 
       // Row background
-      const bg = this.add.rectangle(0, 0, panelW, rowH - 4, 0x151530, 0.9);
+      const bg = this.add.rectangle(0, 0, panelW, rowH - s(4), 0x151530, 0.9);
       bg.setOrigin(0, 0);
-      bg.setStrokeStyle(1, 0x334466, 0.5);
+      bg.setStrokeStyle(s(1), 0x334466, 0.5);
       container.add(bg);
 
       // Icon
-      const icon = this.add.text(10, (rowH - 4) / 2, upgrade.icon, {
-        fontSize: `${m ? 20 : 20}px`,
+      const icon = this.add.text(s(10), (rowH - s(4)) / 2, upgrade.icon, {
+        fontSize: `${s(20)}px`,
         color: '#cc88ff',
         fontFamily: 'monospace',
         fontStyle: 'bold',
@@ -99,8 +103,8 @@ export class MetaScene extends Phaser.Scene {
       container.add(icon);
 
       // Name + level dots on same line
-      const name = this.add.text(m ? 36 : 40, 8, upgrade.name, {
-        fontSize: `${m ? 15 : 14}px`,
+      const name = this.add.text(s(m ? 36 : 40), s(8), upgrade.name, {
+        fontSize: `${s(m ? 15 : 14)}px`,
         color: '#ffffff',
         fontFamily: 'monospace',
         fontStyle: 'bold',
@@ -108,8 +112,8 @@ export class MetaScene extends Phaser.Scene {
       container.add(name);
 
       // Level dots — right of name
-      const dotsText = this.add.text(m ? 36 : 40, m ? 28 : 26, '', {
-        fontSize: `${m ? 12 : 11}px`,
+      const dotsText = this.add.text(s(m ? 36 : 40), s(m ? 28 : 26), '', {
+        fontSize: `${s(m ? 12 : 11)}px`,
         color: '#ffcc44',
         fontFamily: 'monospace',
       });
@@ -117,8 +121,8 @@ export class MetaScene extends Phaser.Scene {
       container.add(dotsText);
 
       // Description
-      const desc = this.add.text(m ? 36 : 40, m ? 42 : 42, '', {
-        fontSize: `${m ? 12 : 11}px`,
+      const desc = this.add.text(s(m ? 36 : 40), s(m ? 42 : 42), '', {
+        fontSize: `${s(m ? 12 : 11)}px`,
         color: '#88aacc',
         fontFamily: 'monospace',
       });
@@ -126,19 +130,19 @@ export class MetaScene extends Phaser.Scene {
       container.add(desc);
 
       // Buy button — right side
-      const btnW = m ? 70 : 75;
-      const btnH = m ? 32 : 28;
-      const btnX = panelW - btnW - 8;
-      const btnY = (rowH - 4) / 2 - btnH / 2;
+      const btnW = s(m ? 70 : 75);
+      const btnH = s(m ? 32 : 28);
+      const btnX = panelW - btnW - s(8);
+      const btnY = (rowH - s(4)) / 2 - btnH / 2;
 
       const btnBg = this.add.rectangle(btnX, btnY, btnW, btnH, 0x335533, 0.9);
       btnBg.setOrigin(0, 0);
-      btnBg.setStrokeStyle(1, 0x55aa55, 0.8);
+      btnBg.setStrokeStyle(s(1), 0x55aa55, 0.8);
       btnBg.setName('btnBg');
       container.add(btnBg);
 
       const btnText = this.add.text(btnX + btnW / 2, btnY + btnH / 2, '', {
-        fontSize: `${m ? 12 : 11}px`,
+        fontSize: `${s(m ? 12 : 11)}px`,
         color: '#88ff88',
         fontFamily: 'monospace',
         fontStyle: 'bold',
@@ -158,16 +162,16 @@ export class MetaScene extends Phaser.Scene {
     }
 
     // Start Run button
-    const startBtnY = startY + META_UPGRADES.length * rowH + (m ? 14 : 20);
-    const startBtnW = m ? 220 : 220;
-    const startBtnH = m ? 52 : 50;
+    const startBtnY = startY + META_UPGRADES.length * rowH + s(m ? 14 : 20);
+    const startBtnW = s(220);
+    const startBtnH = s(m ? 52 : 50);
     const startBtn = this.add.rectangle(w / 2, startBtnY, startBtnW, startBtnH, 0x224488, 0.95);
-    startBtn.setStrokeStyle(2, 0x4488ff, 0.8);
+    startBtn.setStrokeStyle(s(2), 0x4488ff, 0.8);
     startBtn.setInteractive({ useHandCursor: true });
     content.add(startBtn);
 
     const startText = this.add.text(w / 2, startBtnY, 'START RUN', {
-      fontSize: `${m ? 22 : 22}px`,
+      fontSize: `${s(22)}px`,
       color: '#88ccff',
       fontFamily: 'monospace',
       fontStyle: 'bold',
@@ -183,11 +187,11 @@ export class MetaScene extends Phaser.Scene {
 
     // Mobile scroll support
     if (m) {
-      const totalContentH = startBtnY + startBtnH / 2 + 30;
+      const totalContentH = startBtnY + startBtnH / 2 + s(30);
       if (totalContentH > h) {
         let dragStartY = 0;
         let contentStartY = 0;
-        const maxScroll = -(totalContentH - h + 20);
+        const maxScroll = -(totalContentH - h + s(20));
 
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
           dragStartY = pointer.y;

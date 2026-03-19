@@ -42,22 +42,24 @@ export class HUD {
       strokeThickness: 2,
     };
 
+    const d = layout.dpr;
+    const s = (v: number) => Math.round(v * d);
     const yCenter = Math.floor(h / 2) - Math.floor(fs / 2) + 1;
 
     // Gold — left side
-    this.goldText = scene.add.text(8, yCenter, '', {
+    this.goldText = scene.add.text(s(8), yCenter, '', {
       ...baseStyle, fontSize: `${fs + 1}px`, color: '#ffd700', fontStyle: 'bold',
     });
     this.goldText.setScrollFactor(0).setDepth(1001);
 
     // Win streak indicator
-    this.streakText = scene.add.text(isMobile ? 60 : 120, yCenter + 2, '', {
+    this.streakText = scene.add.text(s(isMobile ? 60 : 120), yCenter + s(2), '', {
       ...baseStyle, fontSize: `${fs}px`, color: '#ff9944',
     });
     this.streakText.setScrollFactor(0).setDepth(1001);
 
     // Lives
-    this.livesText = scene.add.text(isMobile ? 100 : 190, yCenter, '', {
+    this.livesText = scene.add.text(s(isMobile ? 100 : 190), yCenter, '', {
       ...baseStyle, color: '#ff6666',
     });
     this.livesText.setScrollFactor(0).setDepth(1001);
@@ -69,28 +71,28 @@ export class HUD {
     this.waveText.setOrigin(0.5, 0).setScrollFactor(0).setDepth(1001);
 
     // Level / XP — right of center
-    const levelX = isMobile ? w / 2 + 50 : w / 2 + 100;
+    const levelX = isMobile ? w / 2 + s(50) : w / 2 + s(100);
     this.levelText = scene.add.text(levelX, yCenter, '', {
       ...baseStyle, color: '#88bbee',
     });
     this.levelText.setScrollFactor(0).setDepth(1001);
 
     // Board count — compact on mobile, uses slash
-    const boardX = isMobile ? w - 60 : w / 2 + 250;
+    const boardX = isMobile ? w - s(60) : w / 2 + s(250);
     this.boardLimitText = scene.add.text(boardX, yCenter, '', {
       ...baseStyle, color: '#aabbcc',
     });
     this.boardLimitText.setScrollFactor(0).setDepth(1001);
 
     // Phase indicator — right side
-    this.phaseText = scene.add.text(w - 8, yCenter, '', {
+    this.phaseText = scene.add.text(w - s(8), yCenter, '', {
       ...baseStyle, color: '#88ff88', fontStyle: 'bold',
     });
     this.phaseText.setOrigin(1, 0).setScrollFactor(0).setDepth(1001);
 
     // Income popup
-    this.incomePopup = scene.add.text(8, h - 2, '', {
-      fontSize: `${isMobile ? 11 : 11}px`,
+    this.incomePopup = scene.add.text(s(8), h - s(2), '', {
+      fontSize: `${s(11)}px`,
       color: '#ffd700',
       fontFamily: 'monospace',
       stroke: '#000000',
