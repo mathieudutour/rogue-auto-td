@@ -33,30 +33,48 @@ export class RunStartScene extends Phaser.Scene {
     const h = layout.height;
     const m = layout.isMobile;
 
-    this.add.rectangle(0, 0, w, h, 0x0a0a1a).setOrigin(0, 0);
+    // Scrollable container for mobile
+    const content = this.add.container(0, 0);
+
+    // Background — oversized to cover scroll
+    const bgH = m ? Math.max(h, 900) : h;
+    this.add.rectangle(0, 0, w, bgH, 0x0a0a1a).setOrigin(0, 0);
 
     // ── Blessings Section ──────────────────────────
 
-    this.add.text(w / 2, m ? 16 : 25, 'CHOOSE A BLESSING', {
-      fontSize: `${m ? 18 : 26}px`,
+    const titleY = m ? 24 : 25;
+    const title = this.add.text(w / 2, titleY, 'CHOOSE A BLESSING', {
+      fontSize: `${m ? 24 : 26}px`,
       color: '#88ff88',
       fontFamily: 'monospace',
       fontStyle: 'bold',
     }).setOrigin(0.5, 0);
+    content.add(title);
 
-    // Roll 3 random blessings (weighted: 60% common, 30% rare, 10% epic)
+    // Roll 3 random blessings
     this.blessingChoices = this.rollBlessings(3);
-    const cardW = Math.min((w - 60) / 3, m ? 150 : 200);
-    const cardH = m ? 100 : 140;
-    const cardY = m ? 50 : 70;
-    const totalCardW = cardW * 3 + 20;
-    const cardStartX = (w - totalCardW) / 2;
+
+    // Mobile: vertical stack; Desktop: horizontal
+    const cardW = m ? Math.min(w - 40, 340) : Math.min((w - 60) / 3, 200);
+    const cardH = m ? 80 : 140;
+    const cardStartY = titleY + (m ? 40 : 50);
 
     this.blessingCards = [];
     for (let i = 0; i < 3; i++) {
       const blessing = this.blessingChoices[i];
-      const x = cardStartX + i * (cardW + 10);
-      const container = this.add.container(x, cardY);
+
+      let x: number, y: number;
+      if (m) {
+        // Vertical stack centered
+        x = (w - cardW) / 2;
+        y = cardStartY + i * (cardH + 10);
+      } else {
+        const totalW = cardW * 3 + 20;
+        x = (w - totalW) / 2 + i * (cardW + 10);
+        y = cardStartY;
+      }
+
+      const container = this.add.container(x, y);
 
       const rarityColor = blessing.rarity === 'epic' ? 0x9944ff :
                            blessing.rarity === 'rare' ? 0x4488ff : 0x44aa44;
@@ -67,33 +85,33 @@ export class RunStartScene extends Phaser.Scene {
       container.add(bg);
 
       // Rarity label
-      this.add.text(cardW / 2, 8, blessing.rarity.toUpperCase(), {
-        fontSize: `${m ? 8 : 10}px`,
+      const rarityLabel = this.add.text(m ? 12 : cardW / 2, m ? 8 : 8, blessing.rarity.toUpperCase(), {
+        fontSize: `${m ? 11 : 10}px`,
         color: `#${rarityColor.toString(16).padStart(6, '0')}`,
         fontFamily: 'monospace',
         fontStyle: 'bold',
-      }).setOrigin(0.5, 0).setName(`rarity_${i}`);
-      container.add(container.last!);
+      }).setOrigin(m ? 0 : 0.5, 0);
+      container.add(rarityLabel);
 
       // Name
-      const nameText = this.add.text(cardW / 2, m ? 24 : 30, blessing.name, {
-        fontSize: `${m ? 11 : 14}px`,
+      const nameText = this.add.text(m ? 12 : cardW / 2, m ? 26 : 30, blessing.name, {
+        fontSize: `${m ? 16 : 14}px`,
         color: '#ffffff',
         fontFamily: 'monospace',
         fontStyle: 'bold',
-        wordWrap: { width: cardW - 16 },
-        align: 'center',
-      }).setOrigin(0.5, 0);
+        wordWrap: { width: cardW - 24 },
+        align: m ? 'left' : 'center',
+      }).setOrigin(m ? 0 : 0.5, 0);
       container.add(nameText);
 
       // Description
-      const descText = this.add.text(cardW / 2, m ? 44 : 55, blessing.description, {
-        fontSize: `${m ? 9 : 11}px`,
+      const descText = this.add.text(m ? 12 : cardW / 2, m ? 50 : 55, blessing.description, {
+        fontSize: `${m ? 14 : 11}px`,
         color: '#aaccaa',
         fontFamily: 'monospace',
-        wordWrap: { width: cardW - 16 },
-        align: 'center',
-      }).setOrigin(0.5, 0);
+        wordWrap: { width: cardW - 24 },
+        align: m ? 'left' : 'center',
+      }).setOrigin(m ? 0 : 0.5, 0);
       container.add(descText);
 
       bg.setInteractive({ useHandCursor: true });
@@ -109,23 +127,26 @@ export class RunStartScene extends Phaser.Scene {
         }
       });
 
+      content.add(container);
       this.blessingCards.push(container);
     }
 
     // ── Curses Section ─────────────────────────────
 
-    const curseY = cardY + cardH + (m ? 20 : 35);
-    this.add.text(w / 2, curseY, 'CURSES (optional — earn more souls)', {
-      fontSize: `${m ? 12 : 16}px`,
+    const cardsEndY = m ? cardStartY + 3 * (cardH + 10) : cardStartY + cardH;
+    const curseY = cardsEndY + (m ? 10 : 35);
+    const curseTitle = this.add.text(w / 2, curseY, m ? 'CURSES (bonus souls)' : 'CURSES (optional — earn more souls)', {
+      fontSize: `${m ? 18 : 16}px`,
       color: '#ff6666',
       fontFamily: 'monospace',
       fontStyle: 'bold',
     }).setOrigin(0.5, 0);
+    content.add(curseTitle);
 
-    const curseRowH = m ? 32 : 40;
-    const curseW = Math.min(w - 40, 500);
+    const curseRowH = m ? 44 : 40;
+    const curseW = Math.min(w - 24, 500);
     const curseX = (w - curseW) / 2;
-    const curseStartY = curseY + (m ? 22 : 30);
+    const curseStartY = curseY + (m ? 32 : 30);
 
     this.curseToggles = [];
     for (let i = 0; i < CURSES.length; i++) {
@@ -133,74 +154,81 @@ export class RunStartScene extends Phaser.Scene {
       const y = curseStartY + i * curseRowH;
       const container = this.add.container(curseX, y);
 
-      const bg = this.add.rectangle(0, 0, curseW, curseRowH - 3, 0x201010, 0.9);
+      const bg = this.add.rectangle(0, 0, curseW, curseRowH - 4, 0x201010, 0.9);
       bg.setOrigin(0, 0);
       bg.setStrokeStyle(1, 0x553333, 0.6);
       bg.setName('bg');
       container.add(bg);
 
       // Toggle box
-      const box = this.add.rectangle(8, (curseRowH - 3) / 2, m ? 14 : 18, m ? 14 : 18, 0x331111);
+      const boxSize = m ? 20 : 18;
+      const box = this.add.rectangle(10, (curseRowH - 4) / 2, boxSize, boxSize, 0x331111);
       box.setOrigin(0, 0.5);
       box.setStrokeStyle(1, 0x664444, 0.8);
       box.setName('box');
       container.add(box);
 
       // Name & desc
-      const text = this.add.text(m ? 28 : 34, (curseRowH - 3) / 2, `${curse.name}: ${curse.description}`, {
-        fontSize: `${m ? 9 : 12}px`,
+      const text = this.add.text(m ? 38 : 34, (curseRowH - 4) / 2, `${curse.name}: ${curse.description}`, {
+        fontSize: `${m ? 13 : 12}px`,
         color: '#cc8888',
         fontFamily: 'monospace',
+        wordWrap: { width: curseW - (m ? 120 : 140) },
       }).setOrigin(0, 0.5);
       container.add(text);
 
       // Multiplier
-      const multText = this.add.text(curseW - 8, (curseRowH - 3) / 2,
-        `+${Math.round((curse.soulMultiplier - 1) * 100)}% souls`, {
-        fontSize: `${m ? 8 : 10}px`,
+      const multText = this.add.text(curseW - 10, (curseRowH - 4) / 2,
+        `+${Math.round((curse.soulMultiplier - 1) * 100)}%`, {
+        fontSize: `${m ? 14 : 12}px`,
         color: '#ffaa44',
         fontFamily: 'monospace',
+        fontStyle: 'bold',
       }).setOrigin(1, 0.5);
       container.add(multText);
 
       bg.setInteractive({ useHandCursor: true });
       bg.on('pointerdown', () => this.toggleCurse(i));
 
+      content.add(container);
       this.curseToggles.push(container);
     }
 
     // Soul multiplier display
     const multY = curseStartY + CURSES.length * curseRowH + (m ? 8 : 12);
     this.multiplierText = this.add.text(w / 2, multY, '', {
-      fontSize: `${m ? 11 : 14}px`,
+      fontSize: `${m ? 16 : 14}px`,
       color: '#ffcc44',
       fontFamily: 'monospace',
       fontStyle: 'bold',
     }).setOrigin(0.5, 0);
+    content.add(this.multiplierText);
 
     // Begin Run button
-    const beginY = multY + (m ? 30 : 45);
-    const beginW = m ? 160 : 220;
-    const beginH = m ? 40 : 50;
+    const beginY = multY + (m ? 36 : 45);
+    const beginW = m ? 220 : 220;
+    const beginH = m ? 52 : 50;
     const beginBtn = this.add.rectangle(w / 2, beginY, beginW, beginH, 0x224488, 0.95);
     beginBtn.setStrokeStyle(2, 0x4488ff, 0.8);
     beginBtn.setInteractive({ useHandCursor: true });
+    content.add(beginBtn);
 
-    this.add.text(w / 2, beginY, 'BEGIN RUN', {
-      fontSize: `${m ? 16 : 22}px`,
+    const beginText = this.add.text(w / 2, beginY, 'BEGIN RUN', {
+      fontSize: `${m ? 22 : 22}px`,
       color: '#88ccff',
       fontFamily: 'monospace',
       fontStyle: 'bold',
     }).setOrigin(0.5, 0.5);
+    content.add(beginText);
 
     beginBtn.on('pointerdown', () => this.startRun());
     beginBtn.on('pointerover', () => beginBtn.setFillStyle(0x3366aa, 1));
     beginBtn.on('pointerout', () => beginBtn.setFillStyle(0x224488, 0.95));
 
     // Skip blessing button
-    const skipY = beginY + beginH / 2 + (m ? 14 : 20);
+    const skipY = beginY + beginH / 2 + (m ? 18 : 20);
     const skipText = this.add.text(w / 2, skipY, 'Skip (no blessing)', {
-      fontSize: `${m ? 10 : 12}px`,
+      fontSize: `${m ? 14 : 12}px`,
       color: '#556677',
       fontFamily: 'monospace',
     }).setOrigin(0.5, 0);
@@ -209,20 +237,41 @@ export class RunStartScene extends Phaser.Scene {
       this.selectedBlessing = null;
       this.startRun();
     });
+    content.add(skipText);
+
+    // Mobile scroll support — drag to scroll the content container
+    if (m) {
+      const totalContentH = skipY + 40;
+      if (totalContentH > h) {
+        let dragStartY = 0;
+        let contentStartY = 0;
+        const maxScroll = -(totalContentH - h + 20);
+
+        this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+          dragStartY = pointer.y;
+          contentStartY = content.y;
+        });
+
+        this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+          if (pointer.isDown) {
+            const dy = pointer.y - dragStartY;
+            content.y = Phaser.Math.Clamp(contentStartY + dy, maxScroll, 0);
+          }
+        });
+      }
+    }
 
     this.updateMultiplier();
   }
 
   private rollBlessings(count: number): Blessing[] {
     const pool = [...BLESSINGS];
-    // Weighted shuffle: assign random weight with rarity bias
     const weighted = pool.map(b => ({
       blessing: b,
       weight: Math.random() * (b.rarity === 'common' ? 3 : b.rarity === 'rare' ? 1.5 : 0.5),
     }));
     weighted.sort((a, b) => b.weight - a.weight);
 
-    // Ensure variety: at least one non-common if possible
     const result: Blessing[] = [];
     const used = new Set<string>();
 
@@ -239,7 +288,6 @@ export class RunStartScene extends Phaser.Scene {
   private selectBlessing(index: number): void {
     this.selectedBlessing = this.blessingChoices[index];
 
-    // Update card visuals
     for (let i = 0; i < this.blessingCards.length; i++) {
       const container = this.blessingCards[i];
       const bg = container.getByName('bg') as Phaser.GameObjects.Rectangle;
@@ -264,7 +312,6 @@ export class RunStartScene extends Phaser.Scene {
       this.activeCurses.add(curse.id);
     }
 
-    // Update toggle visuals
     const container = this.curseToggles[index];
     const box = container.getByName('box') as Phaser.GameObjects.Rectangle;
     const active = this.activeCurses.has(curse.id);

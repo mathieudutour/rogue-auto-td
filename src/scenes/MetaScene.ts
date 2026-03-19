@@ -26,38 +26,45 @@ export class MetaScene extends Phaser.Scene {
     const layout = getLayout(this.scale.width, this.scale.height);
     const w = layout.width;
     const h = layout.height;
-    const isMobile = layout.isMobile;
+    const m = layout.isMobile;
+
+    // Scrollable content container
+    const content = this.add.container(0, 0);
 
     // Background
-    this.add.rectangle(0, 0, w, h, 0x0a0a1a).setOrigin(0, 0);
+    const bgH = m ? Math.max(h, 850) : h;
+    this.add.rectangle(0, 0, w, bgH, 0x0a0a1a).setOrigin(0, 0);
 
     // Title
-    this.add.text(w / 2, isMobile ? 20 : 30, 'SOUL FORGE', {
-      fontSize: `${isMobile ? 22 : 32}px`,
+    const titleText = this.add.text(w / 2, m ? 28 : 30, 'SOUL FORGE', {
+      fontSize: `${m ? 28 : 32}px`,
       color: '#cc88ff',
       fontFamily: 'monospace',
       fontStyle: 'bold',
     }).setOrigin(0.5, 0);
+    content.add(titleText);
 
     // Souls display
-    this.soulsText = this.add.text(w / 2, isMobile ? 50 : 70, '', {
-      fontSize: `${isMobile ? 16 : 22}px`,
+    this.soulsText = this.add.text(w / 2, m ? 64 : 70, '', {
+      fontSize: `${m ? 22 : 22}px`,
       color: '#ffcc44',
       fontFamily: 'monospace',
       fontStyle: 'bold',
     }).setOrigin(0.5, 0);
+    content.add(this.soulsText);
 
     // Stats
-    this.statsText = this.add.text(w / 2, isMobile ? 72 : 98, '', {
-      fontSize: `${isMobile ? 10 : 13}px`,
+    this.statsText = this.add.text(w / 2, m ? 92 : 98, '', {
+      fontSize: `${m ? 13 : 13}px`,
       color: '#667788',
       fontFamily: 'monospace',
     }).setOrigin(0.5, 0);
+    content.add(this.statsText);
 
     // Upgrades list
-    const startY = isMobile ? 100 : 135;
-    const rowH = isMobile ? 46 : 56;
-    const panelW = Math.min(w - 40, 600);
+    const startY = m ? 120 : 135;
+    const rowH = m ? 62 : 56;
+    const panelW = Math.min(w - 20, 600);
     const panelX = (w - panelW) / 2;
 
     this.upgradeRows = [];
@@ -74,46 +81,46 @@ export class MetaScene extends Phaser.Scene {
       container.add(bg);
 
       // Icon
-      const icon = this.add.text(8, (rowH - 4) / 2, upgrade.icon, {
-        fontSize: `${isMobile ? 16 : 20}px`,
+      const icon = this.add.text(10, (rowH - 4) / 2, upgrade.icon, {
+        fontSize: `${m ? 20 : 20}px`,
         color: '#cc88ff',
         fontFamily: 'monospace',
         fontStyle: 'bold',
       }).setOrigin(0, 0.5);
       container.add(icon);
 
-      // Name
-      const name = this.add.text(isMobile ? 30 : 40, 6, upgrade.name, {
-        fontSize: `${isMobile ? 11 : 14}px`,
+      // Name + level dots on same line
+      const name = this.add.text(m ? 36 : 40, 8, upgrade.name, {
+        fontSize: `${m ? 15 : 14}px`,
         color: '#ffffff',
         fontFamily: 'monospace',
         fontStyle: 'bold',
       });
       container.add(name);
 
-      // Description (updated dynamically)
-      const desc = this.add.text(isMobile ? 30 : 40, isMobile ? 22 : 26, '', {
-        fontSize: `${isMobile ? 9 : 11}px`,
-        color: '#88aacc',
-        fontFamily: 'monospace',
-      });
-      desc.setName('desc');
-      container.add(desc);
-
-      // Level dots
-      const dotsText = this.add.text(panelW - (isMobile ? 70 : 90), 6, '', {
-        fontSize: `${isMobile ? 9 : 11}px`,
+      // Level dots — right of name
+      const dotsText = this.add.text(m ? 36 : 40, m ? 28 : 26, '', {
+        fontSize: `${m ? 12 : 11}px`,
         color: '#ffcc44',
         fontFamily: 'monospace',
       });
       dotsText.setName('dots');
       container.add(dotsText);
 
-      // Buy button
-      const btnW = isMobile ? 60 : 75;
-      const btnH = isMobile ? 22 : 28;
-      const btnX = panelW - btnW - 6;
-      const btnY = (rowH - 4) / 2 - btnH / 2 + 4;
+      // Description
+      const desc = this.add.text(m ? 36 : 40, m ? 42 : 42, '', {
+        fontSize: `${m ? 12 : 11}px`,
+        color: '#88aacc',
+        fontFamily: 'monospace',
+      });
+      desc.setName('desc');
+      container.add(desc);
+
+      // Buy button — right side
+      const btnW = m ? 70 : 75;
+      const btnH = m ? 32 : 28;
+      const btnX = panelW - btnW - 8;
+      const btnY = (rowH - 4) / 2 - btnH / 2;
 
       const btnBg = this.add.rectangle(btnX, btnY, btnW, btnH, 0x335533, 0.9);
       btnBg.setOrigin(0, 0);
@@ -122,7 +129,7 @@ export class MetaScene extends Phaser.Scene {
       container.add(btnBg);
 
       const btnText = this.add.text(btnX + btnW / 2, btnY + btnH / 2, '', {
-        fontSize: `${isMobile ? 9 : 11}px`,
+        fontSize: `${m ? 12 : 11}px`,
         color: '#88ff88',
         fontFamily: 'monospace',
         fontStyle: 'bold',
@@ -137,23 +144,26 @@ export class MetaScene extends Phaser.Scene {
         }
       });
 
+      content.add(container);
       this.upgradeRows.push(container);
     }
 
     // Start Run button
-    const startBtnY = startY + META_UPGRADES.length * rowH + (isMobile ? 10 : 20);
-    const startBtnW = isMobile ? 160 : 220;
-    const startBtnH = isMobile ? 40 : 50;
+    const startBtnY = startY + META_UPGRADES.length * rowH + (m ? 14 : 20);
+    const startBtnW = m ? 220 : 220;
+    const startBtnH = m ? 52 : 50;
     const startBtn = this.add.rectangle(w / 2, startBtnY, startBtnW, startBtnH, 0x224488, 0.95);
     startBtn.setStrokeStyle(2, 0x4488ff, 0.8);
     startBtn.setInteractive({ useHandCursor: true });
+    content.add(startBtn);
 
-    this.add.text(w / 2, startBtnY, 'START RUN', {
-      fontSize: `${isMobile ? 16 : 22}px`,
+    const startText = this.add.text(w / 2, startBtnY, 'START RUN', {
+      fontSize: `${m ? 22 : 22}px`,
       color: '#88ccff',
       fontFamily: 'monospace',
       fontStyle: 'bold',
     }).setOrigin(0.5, 0.5);
+    content.add(startText);
 
     startBtn.on('pointerdown', () => {
       this.scene.start('RunStartScene', { meta: this.meta });
@@ -162,14 +172,34 @@ export class MetaScene extends Phaser.Scene {
     startBtn.on('pointerover', () => startBtn.setFillStyle(0x3366aa, 1));
     startBtn.on('pointerout', () => startBtn.setFillStyle(0x224488, 0.95));
 
+    // Mobile scroll support
+    if (m) {
+      const totalContentH = startBtnY + startBtnH / 2 + 30;
+      if (totalContentH > h) {
+        let dragStartY = 0;
+        let contentStartY = 0;
+        const maxScroll = -(totalContentH - h + 20);
+
+        this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+          dragStartY = pointer.y;
+          contentStartY = content.y;
+        });
+
+        this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+          if (pointer.isDown) {
+            const dy = pointer.y - dragStartY;
+            content.y = Phaser.Math.Clamp(contentStartY + dy, maxScroll, 0);
+          }
+        });
+      }
+    }
+
     this.refreshUI();
   }
 
   private refreshUI(): void {
     this.soulsText.setText(`Souls: ${this.meta.getSouls()}`);
     this.statsText.setText(`Runs: ${this.meta.getTotalRuns()}  |  Best Wave: ${this.meta.getBestWave()}`);
-
-    const isMobile = getLayout(this.scale.width, this.scale.height).isMobile;
 
     for (let i = 0; i < META_UPGRADES.length; i++) {
       const upgrade = META_UPGRADES[i];
