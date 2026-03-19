@@ -36,7 +36,7 @@ export class MetaScene extends Phaser.Scene {
     this.add.rectangle(0, 0, w, bgH, 0x0a0a1a).setOrigin(0, 0);
 
     // Title
-    const titleText = this.add.text(w / 2, m ? 28 : 30, 'SOUL FORGE', {
+    const titleText = this.add.text(w / 2, m ? 28 : 30, 'THE SOUL FORGE', {
       fontSize: `${m ? 28 : 32}px`,
       color: '#cc88ff',
       fontFamily: 'monospace',
@@ -44,8 +44,17 @@ export class MetaScene extends Phaser.Scene {
     }).setOrigin(0.5, 0);
     content.add(titleText);
 
+    // Flavor text
+    const flavor = this.add.text(w / 2, m ? 58 : 62, 'Temper your power between rifts', {
+      fontSize: `${m ? 12 : 12}px`,
+      color: '#776699',
+      fontFamily: 'monospace',
+      fontStyle: 'italic',
+    }).setOrigin(0.5, 0);
+    content.add(flavor);
+
     // Souls display
-    this.soulsText = this.add.text(w / 2, m ? 64 : 70, '', {
+    this.soulsText = this.add.text(w / 2, m ? 74 : 80, '', {
       fontSize: `${m ? 22 : 22}px`,
       color: '#ffcc44',
       fontFamily: 'monospace',
@@ -54,7 +63,7 @@ export class MetaScene extends Phaser.Scene {
     content.add(this.soulsText);
 
     // Stats
-    this.statsText = this.add.text(w / 2, m ? 92 : 98, '', {
+    this.statsText = this.add.text(w / 2, m ? 102 : 108, '', {
       fontSize: `${m ? 13 : 13}px`,
       color: '#667788',
       fontFamily: 'monospace',
@@ -62,7 +71,7 @@ export class MetaScene extends Phaser.Scene {
     content.add(this.statsText);
 
     // Upgrades list
-    const startY = m ? 120 : 135;
+    const startY = m ? 130 : 140;
     const rowH = m ? 62 : 56;
     const panelW = Math.min(w - 20, 600);
     const panelX = (w - panelW) / 2;

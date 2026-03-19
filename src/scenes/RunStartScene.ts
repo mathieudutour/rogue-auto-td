@@ -43,7 +43,7 @@ export class RunStartScene extends Phaser.Scene {
     // ── Blessings Section ──────────────────────────
 
     const titleY = m ? 24 : 25;
-    const title = this.add.text(w / 2, titleY, 'CHOOSE A BLESSING', {
+    const title = this.add.text(w / 2, titleY, 'ECHOES OF THE SPIRE', {
       fontSize: `${m ? 24 : 26}px`,
       color: '#88ff88',
       fontFamily: 'monospace',
@@ -51,13 +51,21 @@ export class RunStartScene extends Phaser.Scene {
     }).setOrigin(0.5, 0);
     content.add(title);
 
+    const subtitle = this.add.text(w / 2, titleY + (m ? 30 : 32), 'Choose a blessing for this rift', {
+      fontSize: `${m ? 13 : 12}px`,
+      color: '#557755',
+      fontFamily: 'monospace',
+      fontStyle: 'italic',
+    }).setOrigin(0.5, 0);
+    content.add(subtitle);
+
     // Roll 3 random blessings
     this.blessingChoices = this.rollBlessings(3);
 
     // Mobile: vertical stack; Desktop: horizontal
     const cardW = m ? Math.min(w - 40, 340) : Math.min((w - 60) / 3, 200);
     const cardH = m ? 80 : 140;
-    const cardStartY = titleY + (m ? 40 : 50);
+    const cardStartY = titleY + (m ? 56 : 50);
 
     this.blessingCards = [];
     for (let i = 0; i < 3; i++) {
@@ -135,7 +143,7 @@ export class RunStartScene extends Phaser.Scene {
 
     const cardsEndY = m ? cardStartY + 3 * (cardH + 10) : cardStartY + cardH;
     const curseY = cardsEndY + (m ? 10 : 35);
-    const curseTitle = this.add.text(w / 2, curseY, m ? 'CURSES (bonus souls)' : 'CURSES (optional — earn more souls)', {
+    const curseTitle = this.add.text(w / 2, curseY, m ? 'RIFT SCARS (bonus souls)' : 'RIFT SCARS (embrace the void for more souls)', {
       fontSize: `${m ? 18 : 16}px`,
       color: '#ff6666',
       fontFamily: 'monospace',

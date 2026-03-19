@@ -569,7 +569,7 @@ export class UIScene extends Phaser.Scene {
     this.gameOverOverlay.add(bg);
 
     const titleFs = m.isMobile ? 28 : 48;
-    const title = this.add.text(m.width / 2, m.height / 2 - 60, 'GAME OVER', {
+    const title = this.add.text(m.width / 2, m.height / 2 - 80, 'THE SHARD BREAKS', {
       fontSize: `${titleFs}px`,
       color: '#ff4444',
       fontFamily: 'monospace',
@@ -578,7 +578,16 @@ export class UIScene extends Phaser.Scene {
     title.setOrigin(0.5);
     this.gameOverOverlay.add(title);
 
-    const info = this.add.text(m.width / 2, m.height / 2 - 10, `You survived ${wave - 1} waves!`, {
+    const flavor = this.add.text(m.width / 2, m.height / 2 - 40, 'The rift overwhelms your defenses...', {
+      fontSize: `${m.isMobile ? 12 : 14}px`,
+      color: '#886666',
+      fontFamily: 'monospace',
+      fontStyle: 'italic',
+    });
+    flavor.setOrigin(0.5);
+    this.gameOverOverlay.add(flavor);
+
+    const info = this.add.text(m.width / 2, m.height / 2 - 10, `Defended for ${wave - 1} waves`, {
       fontSize: `${m.isMobile ? 16 : 24}px`,
       color: '#ffffff',
       fontFamily: 'monospace',
@@ -588,7 +597,7 @@ export class UIScene extends Phaser.Scene {
 
     // Souls earned
     if (soulsEarned > 0) {
-      const soulsText = this.add.text(m.width / 2, m.height / 2 + 25, `+${soulsEarned} souls`, {
+      const soulsText = this.add.text(m.width / 2, m.height / 2 + 25, `+${soulsEarned} souls absorbed`, {
         fontSize: `${m.isMobile ? 18 : 26}px`,
         color: '#cc88ff',
         fontFamily: 'monospace',
@@ -602,22 +611,24 @@ export class UIScene extends Phaser.Scene {
     const blessing = gameScene.runConfig?.blessing;
     const curses = gameScene.runConfig?.curses || [];
     let modText = '';
-    if (blessing) modText += `Blessing: ${blessing.name}`;
+    if (blessing) modText += `Echo: ${blessing.name}`;
     if (curses.length > 0) {
       if (modText) modText += '  |  ';
-      modText += `Curses: ${curses.map(c => c.name).join(', ')}`;
+      modText += `Scars: ${curses.map(c => c.name).join(', ')}`;
     }
     if (modText) {
       const modLabel = this.add.text(m.width / 2, m.height / 2 + (soulsEarned > 0 ? 55 : 35), modText, {
-        fontSize: `${m.isMobile ? 9 : 11}px`,
+        fontSize: `${m.isMobile ? 11 : 12}px`,
         color: '#667788',
         fontFamily: 'monospace',
+        wordWrap: { width: m.width - 40 },
+        align: 'center',
       });
       modLabel.setOrigin(0.5);
       this.gameOverOverlay.add(modLabel);
     }
 
-    const restart = this.add.text(m.width / 2, m.height / 2 + 90, 'Tap to continue', {
+    const restart = this.add.text(m.width / 2, m.height / 2 + 90, 'Return to the Soul Forge', {
       fontSize: `${m.isMobile ? 14 : 18}px`,
       color: '#88ff88',
       fontFamily: 'monospace',
