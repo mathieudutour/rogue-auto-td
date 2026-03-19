@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS, REROLL_COST, BUY_XP_COST, TRAIT_COLORS, MAX_LEVEL } from '../utils/constants';
+import { REROLL_COST, BUY_XP_COST, MAX_LEVEL } from '../utils/constants';
 import { ShopSlot } from '../systems/ShopManager';
 import { GameScene } from '../scenes/GameScene';
 import { getLayout, LayoutMetrics } from '../utils/responsive';
@@ -143,24 +143,30 @@ export class ShopPanel {
   private createSlotContainer(x: number, y: number, width: number, height: number, index: number): Phaser.GameObjects.Container {
     const container = this.scene.add.container(x, y);
     const m = this.layout;
-    const fs = m.shopFontSize;
 
-    // Card background
+    // Card background — full card is the portrait area
     const card = this.scene.add.rectangle(0, 0, width, height, 0x1a1a28, 1);
     card.setOrigin(0, 0);
     card.setStrokeStyle(m.isMobile ? 1 : 2, 0x333355, 0.8);
     card.setName('card');
     container.add(card);
 
-    // Cost badge (top-left corner)
-    const badgeW = m.isMobile ? 20 : 24;
-    const badgeH = m.isMobile ? 16 : 18;
-    const costBadge = this.scene.add.rectangle(0, 0, badgeW, badgeH, 0x888888, 1);
+    // Champion portrait — centered and scaled to fill the card
+    const portrait = this.scene.add.sprite(width / 2, height * 0.4, 'champion_default');
+    const portraitScale = m.isMobile ? Math.min(width / 28, height / 36) * 0.7 : Math.min(width / 28, height / 36) * 0.8;
+    portrait.setScale(portraitScale);
+    portrait.setName('portrait');
+    portrait.setVisible(false);
+    container.add(portrait);
+
+    // Cost badge (top-left corner, on top of portrait)
+    const badgeSize = m.isMobile ? 16 : 20;
+    const costBadge = this.scene.add.rectangle(0, 0, badgeSize, badgeSize, 0x888888, 1);
     costBadge.setOrigin(0, 0);
     costBadge.setName('costBadge');
     container.add(costBadge);
 
-    const costText = this.scene.add.text(badgeW / 2, badgeH / 2, '', {
+    const costText = this.scene.add.text(badgeSize / 2, badgeSize / 2, '', {
       fontSize: `${m.isMobile ? 10 : 12}px`,
       color: '#ffffff',
       fontFamily: 'monospace',
@@ -170,67 +176,46 @@ export class ShopPanel {
     costText.setName('costText');
     container.add(costText);
 
-    // Champion portrait
-    const portraitX = m.isMobile ? 16 : 26;
-    const portraitY = m.isMobile ? 26 : 32;
-    const portrait = this.scene.add.sprite(portraitX, portraitY, 'champion_default');
-    portrait.setScale(m.isMobile ? 0.9 : 1.2);
-    portrait.setName('portrait');
-    portrait.setVisible(false);
-    container.add(portrait);
+    // Name banner at bottom — dark overlay strip
+    const bannerH = m.isMobile ? 26 : 32;
+    const banner = this.scene.add.rectangle(0, height - bannerH, width, bannerH, 0x000000, 0.7);
+    banner.setOrigin(0, 0);
+    banner.setName('banner');
+    container.add(banner);
 
-    // Name text
-    const nameX = m.isMobile ? 32 : 44;
-    const nameY = m.isMobile ? 14 : 20;
-    const nameText = this.scene.add.text(nameX, nameY, '', {
-      fontSize: `${fs}px`,
+    // Name text — centered in banner
+    const nameText = this.scene.add.text(width / 2, height - bannerH + (m.isMobile ? 5 : 6), '', {
+      fontSize: `${m.isMobile ? 10 : 11}px`,
       color: '#ffffff',
       fontFamily: 'monospace',
       fontStyle: 'bold',
-      wordWrap: { width: width - nameX - 4 },
+      align: 'center',
     });
-    nameText.setOrigin(0, 0);
+    nameText.setOrigin(0.5, 0);
     nameText.setName('nameText');
     container.add(nameText);
 
-    // Traits text
-    const traitText = this.scene.add.text(nameX, nameY + (m.isMobile ? 13 : 16), '', {
-      fontSize: `${m.isMobile ? 9 : 9}px`,
+    // Traits text — below name in the banner
+    const traitText = this.scene.add.text(width / 2, height - bannerH + (m.isMobile ? 16 : 19), '', {
+      fontSize: `${m.isMobile ? 8 : 9}px`,
       color: '#aaaacc',
       fontFamily: 'monospace',
+      align: 'center',
     });
-    traitText.setOrigin(0, 0);
+    traitText.setOrigin(0.5, 0);
     traitText.setName('traitText');
     container.add(traitText);
 
-    // Stats row
-    const statsY = m.isMobile ? 40 : 54;
-    const statsText = this.scene.add.text(4, statsY, '', {
-      fontSize: `${m.isMobile ? 9 : 9}px`,
-      color: '#99aabb',
-      fontFamily: 'monospace',
-      lineSpacing: m.isMobile ? 1 : 2,
-    });
-    statsText.setOrigin(0, 0);
-    statsText.setName('statsText');
-    container.add(statsText);
-
-    // Buy button area at bottom
-    const buyH = m.isMobile ? 20 : 22;
-    const buyBar = this.scene.add.rectangle(0, height - buyH, width, buyH, 0x224422, 0.8);
-    buyBar.setOrigin(0, 0);
-    buyBar.setName('buyBar');
-    container.add(buyBar);
-
-    const buyText = this.scene.add.text(width / 2, height - buyH / 2, 'BUY', {
-      fontSize: `${m.isMobile ? 10 : 12}px`,
-      color: '#66ff66',
+    // Owned indicator (top-right) — shows how many copies you have
+    const ownedText = this.scene.add.text(width - 3, 2, '', {
+      fontSize: `${m.isMobile ? 9 : 10}px`,
+      color: '#44ff88',
       fontFamily: 'monospace',
       fontStyle: 'bold',
     });
-    buyText.setOrigin(0.5, 0.5);
-    buyText.setName('buyText');
-    container.add(buyText);
+    ownedText.setOrigin(1, 0);
+    ownedText.setName('ownedText');
+    container.add(ownedText);
 
     // Make the whole card clickable
     card.setInteractive({ useHandCursor: true });
@@ -355,6 +340,23 @@ export class ShopPanel {
 
   updateSlots(slots: ShopSlot[]): void {
     const m = this.layout;
+
+    // Count owned copies of each champion (board + bench)
+    const ownedCounts = new Map<string, number>();
+    const gameScene = this.scene.scene.get('GameScene') as GameScene;
+    if (gameScene) {
+      for (const champ of gameScene.champions) {
+        const id = champ.championId;
+        ownedCounts.set(id, (ownedCounts.get(id) || 0) + 1);
+      }
+      for (const champ of gameScene.bench) {
+        if (champ) {
+          const id = champ.championId;
+          ownedCounts.set(id, (ownedCounts.get(id) || 0) + 1);
+        }
+      }
+    }
+
     for (let i = 0; i < this.slotContainers.length; i++) {
       const container = this.slotContainers[i];
       const slot = slots[i];
@@ -365,17 +367,17 @@ export class ShopPanel {
       const portrait = container.getByName('portrait') as Phaser.GameObjects.Sprite;
       const nameText = container.getByName('nameText') as Phaser.GameObjects.Text;
       const traitText = container.getByName('traitText') as Phaser.GameObjects.Text;
-      const statsText = container.getByName('statsText') as Phaser.GameObjects.Text;
-      const buyBar = container.getByName('buyBar') as Phaser.GameObjects.Rectangle;
-      const buyText = container.getByName('buyText') as Phaser.GameObjects.Text;
+      const banner = container.getByName('banner') as Phaser.GameObjects.Rectangle;
+      const ownedText = container.getByName('ownedText') as Phaser.GameObjects.Text;
 
       if (slot && slot.available) {
         const d = slot.championData;
         const tierColor = COST_COLORS[d.cost] || 0x888888;
         const bgColor = COST_BG[d.cost] || 0x1a1a28;
+        const owned = ownedCounts.get(d.id) || 0;
 
         card.setFillStyle(bgColor, 1);
-        card.setStrokeStyle(m.isMobile ? 1 : 2, tierColor, 0.7);
+        card.setStrokeStyle(m.isMobile ? 1 : 2, owned > 0 ? 0x44ff88 : tierColor, owned > 0 ? 0.9 : 0.7);
         card.setData('baseFill', bgColor);
         card.setData('hoverFill', Phaser.Display.Color.ValueToColor(bgColor).lighten(15).color);
 
@@ -392,19 +394,15 @@ export class ShopPanel {
         const traitStr = d.traits.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join('/');
         traitText.setText(traitStr);
 
-        if (m.isMobile) {
-          statsText.setText(`D${d.stats.damage} R${d.stats.range} S${d.stats.attackSpeed.toFixed(1)}\n${d.ultimate.name}`);
-        } else {
-          const dmgStr = `DMG ${d.stats.damage}`;
-          const rngStr = `RNG ${d.stats.range}`;
-          const spdStr = `SPD ${d.stats.attackSpeed.toFixed(1)}`;
-          statsText.setText(`${dmgStr}  ${rngStr}\n${spdStr}  ULT: ${d.ultimate.name}`);
-        }
+        banner.setVisible(true);
 
-        buyBar.setFillStyle(0x224422, 0.8);
-        buyBar.setVisible(true);
-        buyText.setText(`BUY ${d.cost}g`);
-        buyText.setColor('#66ff66');
+        // Show owned count indicator
+        if (owned > 0) {
+          ownedText.setText('\u2605'.repeat(owned));
+          ownedText.setVisible(true);
+        } else {
+          ownedText.setVisible(false);
+        }
       } else {
         card.setFillStyle(0x111118, 0.6);
         card.setStrokeStyle(1, 0x222233, 0.4);
@@ -416,9 +414,8 @@ export class ShopPanel {
         nameText.setText(m.isMobile ? '' : 'SOLD');
         nameText.setColor('#444455');
         traitText.setText('');
-        statsText.setText('');
-        buyBar.setVisible(false);
-        buyText.setText('');
+        banner.setVisible(false);
+        ownedText.setVisible(false);
       }
     }
   }
