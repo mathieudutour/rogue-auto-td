@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { TRAIT_COLORS } from '../utils/constants';
 import { ActiveSynergy } from '../systems/SynergyManager';
 import { SynergyData } from '../data/synergies';
+import { Champion } from '../entities/Champion';
 import { getLayout, getDpr } from '../utils/responsive';
 
 export class SynergyBar {
@@ -19,7 +20,9 @@ export class SynergyBar {
   private tooltipBg: Phaser.GameObjects.Rectangle;
   private tooltipBorder: Phaser.GameObjects.Rectangle;
   private tooltipTexts: Phaser.GameObjects.Text[] = [];
+  private tooltipSprites: Phaser.GameObjects.Sprite[] = [];
   private pinnedSynergy: SynergyData | null = null;
+  private placedChampions: Champion[] = [];
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -53,7 +56,10 @@ export class SynergyBar {
     this.tooltipContainer.add(this.tooltipBorder);
   }
 
-  update(synergies: ActiveSynergy[]): void {
+  update(synergies: ActiveSynergy[], champions?: Champion[]): void {
+    if (champions) {
+      this.placedChampions = champions.filter(c => c.placed);
+    }
     for (const c of this.entryContainers) {
       c.destroy();
     }
@@ -137,9 +143,11 @@ export class SynergyBar {
   }
 
   private showTooltip(synergy: ActiveSynergy, entryY: number): void {
-    // Clear old texts
+    // Clear old texts and sprites
     for (const t of this.tooltipTexts) t.destroy();
     this.tooltipTexts = [];
+    for (const sp of this.tooltipSprites) sp.destroy();
+    this.tooltipSprites = [];
 
     const d = this.dpr;
     const s = (v: number) => Math.round(v * d);
@@ -188,6 +196,45 @@ export class SynergyBar {
       this.tooltipContainer.add(tierDesc);
       this.tooltipTexts.push(tierDesc);
       cy += Math.max(tierDesc.height, s(14)) + s(4);
+    }
+
+    cy += s(4);
+
+    // Champion portraits — show placed champions with this trait
+    const traitChamps = this.placedChampions.filter(c => c.traits.includes(data.id));
+    if (traitChamps.length > 0) {
+      // Deduplicate by champion ID (star upgrades merge)
+      const seen = new Set<string>();
+      const uniqueChamps: Champion[] = [];
+      for (const c of traitChamps) {
+        if (!seen.has(c.championId)) {
+          seen.add(c.championId);
+          uniqueChamps.push(c);
+        }
+      }
+
+      const iconSize = s(20);
+      const iconGap = s(4);
+      let cx = padX;
+
+      for (const champ of uniqueChamps) {
+        const sprite = this.scene.add.sprite(cx + iconSize / 2, cy + iconSize / 2, champ.textureKey);
+        sprite.setDisplaySize(iconSize, iconSize);
+        this.tooltipContainer.add(sprite);
+        this.tooltipSprites.push(sprite);
+
+        // Champion name label below portrait
+        const nameLabel = this.scene.add.text(cx + iconSize / 2, cy + iconSize + s(2), champ.name.split(' ').pop() || '', {
+          fontSize: `${s(7)}px`, fontFamily: 'monospace', color: '#aabbcc',
+        });
+        nameLabel.setOrigin(0.5, 0);
+        this.tooltipContainer.add(nameLabel);
+        this.tooltipTexts.push(nameLabel);
+
+        cx += iconSize + iconGap;
+      }
+
+      cy += iconSize + s(14);
     }
 
     cy += s(4);

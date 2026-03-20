@@ -103,6 +103,9 @@ export class Champion {
   // Combat
   attackCooldown: number = 0;
   target: import('../entities/Enemy').Enemy | null = null;
+
+  // Damage tracking per wave
+  waveDamage: number = 0;
   private rangeCircle: Phaser.GameObjects.Image | null = null;
 
   constructor(scene: GameScene, data: ChampionData) {

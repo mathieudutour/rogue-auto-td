@@ -10,6 +10,7 @@ import { tileToScreen, screenToTileRounded } from '../utils/iso';
 import { TileType } from '../map/IsometricMap';
 import { Champion } from '../entities/Champion';
 import { getLayout, LayoutMetrics } from '../utils/responsive';
+import { DamagePanel } from '../ui/DamagePanel';
 
 export class UIScene extends Phaser.Scene {
   private hud!: HUD;
@@ -19,6 +20,7 @@ export class UIScene extends Phaser.Scene {
   private itemPanel!: ItemPanel;
   private benchSlots: Phaser.GameObjects.Container[] = [];
   private gameOverOverlay: Phaser.GameObjects.Container | null = null;
+  private damagePanel!: DamagePanel;
   private layout!: LayoutMetrics;
 
   // Drag state
@@ -49,6 +51,7 @@ export class UIScene extends Phaser.Scene {
     this.synergyBar = new SynergyBar(this);
     this.tooltip = new ChampionTooltip(this);
     this.itemPanel = new ItemPanel(this);
+    this.damagePanel = new DamagePanel(this);
 
     this.shopPanel.setupEvents(gameScene);
     this.itemPanel.setupEvents(gameScene);
@@ -62,6 +65,10 @@ export class UIScene extends Phaser.Scene {
     gameScene.events.on('phaseChanged', (phase: string) => {
       this.hud.updatePhase(phase);
       this.shopPanel.updatePhase(phase);
+      if (phase === 'shopping') this.damagePanel.hide();
+    });
+    gameScene.events.on('damageUpdate', (champions: Champion[]) => {
+      this.damagePanel.update(champions);
     });
     gameScene.events.on('incomeBreakdown', (income: { base: number; interest: number; streak: number; total: number }) => {
       this.hud.updateGold(gameScene.economyManager.getGold());
@@ -69,7 +76,7 @@ export class UIScene extends Phaser.Scene {
       this.hud.showIncomeBreakdown(income);
     });
     gameScene.events.on('shopUpdated', (slots: any[]) => this.shopPanel.updateSlots(slots));
-    gameScene.events.on('synergiesChanged', (synergies: any[]) => this.synergyBar.update(synergies));
+    gameScene.events.on('synergiesChanged', (synergies: any[]) => this.synergyBar.update(synergies, gameScene.champions));
     gameScene.events.on('championsChanged', () => {
       this.updateBenchUI(gameScene);
       this.hud.updateBoardCount(gameScene.getPlacedCount(), gameScene.economyManager.getMaxBoardSize());

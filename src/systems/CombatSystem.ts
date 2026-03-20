@@ -19,6 +19,7 @@ export class CombatSystem {
       target,
       champion.damage,
       champion.synergyBonuses,
+      champion,
     );
     this.projectiles.push(projectile);
 
@@ -33,6 +34,7 @@ export class CombatSystem {
           extraTarget,
           champion.damage,
           champion.synergyBonuses,
+          champion,
         );
         this.projectiles.push(extra);
       }
@@ -55,6 +57,7 @@ export class CombatSystem {
           const pos = enemy.getPosition();
           if (this.dist(cx, cy, pos.x, pos.y) <= radius) {
             enemy.takeDamage(dmg);
+            champion.waveDamage += dmg;
           }
         }
         break;
@@ -72,6 +75,7 @@ export class CombatSystem {
           const ePos = enemy.getPosition();
           if (this.dist(pos.x, pos.y, ePos.x, ePos.y) <= radius) {
             enemy.takeDamage(dmg);
+            champion.waveDamage += dmg;
           }
         }
         break;
@@ -142,6 +146,7 @@ export class CombatSystem {
         if (!currentTarget || !currentTarget.isAlive()) break;
 
         currentTarget.takeDamage(dmg);
+        champion.waveDamage += dmg;
         const hit = new Set<Enemy>([currentTarget]);
         let currentDamage = dmg;
 
@@ -166,6 +171,7 @@ export class CombatSystem {
           if (!bestEnemy) break;
           this.showChainEffect(currentTarget!.getPosition(), bestEnemy.getPosition());
           bestEnemy.takeDamage(currentDamage);
+          champion.waveDamage += currentDamage;
           hit.add(bestEnemy);
           currentTarget = bestEnemy;
         }
@@ -177,6 +183,7 @@ export class CombatSystem {
         if (!target || !target.isAlive()) break;
         const dmg = ult.damage ?? champion.damage * 5;
         target.takeDamage(dmg);
+        champion.waveDamage += dmg;
         this.showSnipeEffect(cx, cy, target.getPosition());
         break;
       }
@@ -187,6 +194,7 @@ export class CombatSystem {
         const dmg = ult.damage ?? 500;
         const gold = ult.value ?? 3;
         target.takeDamage(dmg);
+        champion.waveDamage += dmg;
         if (!target.isAlive()) {
           this.scene.economyManager.addGold(gold);
           this.scene.events.emit('goldChanged', this.scene.economyManager.getGold());

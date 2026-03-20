@@ -318,9 +318,10 @@ export class GameScene extends Phaser.Scene {
     this.phase = 'combat';
     this.livesAtWaveStart = this.lives;
 
-    // Reset mana and buffs for all champions
+    // Reset mana, buffs, and damage tracking for all champions
     for (const champion of this.champions) {
       champion.resetCombatState();
+      champion.waveDamage = 0;
     }
 
     // Apply synergies
@@ -346,6 +347,9 @@ export class GameScene extends Phaser.Scene {
       for (const champion of this.champions) {
         champion.update(delta);
       }
+
+      // Emit damage stats for UI
+      this.events.emit('damageUpdate', this.champions);
 
       // Check wave complete
       if (this.waveManager.isWaveComplete() && this.enemies.length === 0) {

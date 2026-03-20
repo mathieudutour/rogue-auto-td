@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { Enemy } from './Enemy';
 import { GameScene } from '../scenes/GameScene';
-import { SynergyBonusState } from './Champion';
+import { Champion, SynergyBonusState } from './Champion';
 
 const PROJECTILE_SPEED = 300; // pixels per second
 
@@ -12,6 +12,7 @@ export class Projectile {
   private damage: number;
   private alive: boolean = true;
   private synergy: SynergyBonusState;
+  private owner: Champion | null;
 
   constructor(
     scene: GameScene,
@@ -20,11 +21,13 @@ export class Projectile {
     target: Enemy,
     damage: number,
     synergy: SynergyBonusState,
+    owner?: Champion,
   ) {
     this.scene = scene;
     this.target = target;
     this.damage = damage;
     this.synergy = synergy;
+    this.owner = owner ?? null;
 
     const textureKey = this.getTextureForEffects(synergy);
     this.sprite = scene.add.sprite(x, y, textureKey);
@@ -81,6 +84,7 @@ export class Projectile {
 
     // Apply primary damage
     this.target.takeDamage(finalDamage);
+    if (this.owner) this.owner.waveDamage += finalDamage;
 
     // Slow on hit
     if (this.synergy.slowAmount > 0 && this.synergy.slowAmount < 1) {
@@ -111,7 +115,9 @@ export class Projectile {
     if (this.synergy.executeThreshold > 0 && this.target.isAlive()) {
       const hpPercent = this.target.health / this.target.maxHealth;
       if (hpPercent <= this.synergy.executeThreshold) {
-        this.target.takeDamage(this.target.health);
+        const execDmg = this.target.health;
+        this.target.takeDamage(execDmg);
+        if (this.owner) this.owner.waveDamage += execDmg;
         this.showExecuteEffect(targetPos);
       }
     }
@@ -145,6 +151,7 @@ export class Projectile {
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist <= radius) {
         enemy.takeDamage(splashDmg);
+        if (this.owner) this.owner.waveDamage += splashDmg;
       }
     }
   }
@@ -201,6 +208,7 @@ export class Projectile {
       this.showChainEffect(currentTarget.getPosition(), bestEnemy.getPosition());
 
       bestEnemy.takeDamage(currentDamage);
+      if (this.owner) this.owner.waveDamage += currentDamage;
       hit.add(bestEnemy);
       currentTarget = bestEnemy;
     }

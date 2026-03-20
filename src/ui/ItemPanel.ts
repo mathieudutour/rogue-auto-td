@@ -5,7 +5,9 @@ import { BENCH_SIZE } from '../utils/constants';
 import { getLayout, LayoutMetrics } from '../utils/responsive';
 import {
   HeldItem, getHeldItemName, getHeldItemColor, getHeldItemDescription,
+  findCombinedItem, CombinedItemData,
 } from '../data/items';
+import { Champion } from '../entities/Champion';
 
 export class ItemPanel {
   private scene: Phaser.Scene;
@@ -26,6 +28,9 @@ export class ItemPanel {
 
   // Tooltip
   private tooltipContainer: Phaser.GameObjects.Container | null = null;
+
+  // Combination preview tooltip (shown while dragging over a champion)
+  private combinePreviewContainer: Phaser.GameObjects.Container | null = null;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -107,6 +112,7 @@ export class ItemPanel {
       }
       if (this.isDragging && this.dragSprite) {
         this.dragSprite.setPosition(pointer.x, pointer.y);
+        this.updateCombinePreview(gameScene, pointer);
       }
     });
 
@@ -207,6 +213,7 @@ export class ItemPanel {
       this.dragSprite.destroy();
       this.dragSprite = null;
     }
+    this.hideCombinePreview();
     this.dragIndex = -1;
     this.isDragging = false;
     this.update(gameScene.itemInventory);
@@ -246,6 +253,127 @@ export class ItemPanel {
     if (this.tooltipContainer) {
       this.tooltipContainer.destroy();
       this.tooltipContainer = null;
+    }
+  }
+
+  /** Find the champion under the pointer (bench or board) */
+  private findChampionAtPointer(gameScene: GameScene, pointer: Phaser.Input.Pointer): Champion | null {
+    const benchIdx = this.getBenchSlotAt(pointer.x, pointer.y);
+    if (benchIdx >= 0) return gameScene.bench[benchIdx] ?? null;
+
+    const worldPoint = gameScene.cameras.main.getWorldPoint(pointer.x, pointer.y);
+    const { col, row } = screenToTileRounded(worldPoint.x, worldPoint.y);
+    return gameScene.champions.find(c => c.placed && c.gridCol === col && c.gridRow === row) ?? null;
+  }
+
+  /** Check if the dragged item can combine with any item on the target champion */
+  private findCombination(gameScene: GameScene, champion: Champion): CombinedItemData | null {
+    const dragItem = gameScene.itemInventory[this.dragIndex];
+    if (!dragItem || !dragItem.isComponent) return null;
+
+    for (const existing of champion.items) {
+      if (existing.isComponent) {
+        const combined = findCombinedItem(existing.componentId!, dragItem.componentId!);
+        if (combined) return combined;
+      }
+    }
+    return null;
+  }
+
+  private updateCombinePreview(gameScene: GameScene, pointer: Phaser.Input.Pointer): void {
+    const champ = this.findChampionAtPointer(gameScene, pointer);
+    if (!champ) {
+      this.hideCombinePreview();
+      return;
+    }
+
+    const combined = this.findCombination(gameScene, champ);
+    if (!combined) {
+      this.hideCombinePreview();
+      return;
+    }
+
+    // Only rebuild if showing a different item
+    if (this.combinePreviewContainer?.getData('itemId') === combined.id) {
+      // Just reposition
+      const m = this.layout;
+      const d = m.dpr;
+      const s = (v: number) => Math.round(v * d);
+      this.combinePreviewContainer.setPosition(pointer.x + s(20), pointer.y - s(10));
+      return;
+    }
+
+    this.hideCombinePreview();
+    this.showCombinePreview(combined, pointer);
+  }
+
+  private showCombinePreview(combined: CombinedItemData, pointer: Phaser.Input.Pointer): void {
+    const m = this.layout;
+    const d = m.dpr;
+    const s = (v: number) => Math.round(v * d);
+    const tipW = s(m.isMobile ? 160 : 190);
+
+    this.combinePreviewContainer = this.scene.add.container(pointer.x + s(20), pointer.y - s(10));
+    this.combinePreviewContainer.setScrollFactor(0).setDepth(2100);
+    this.combinePreviewContainer.setData('itemId', combined.id);
+
+    const color = combined.color;
+    const colorHex = '#' + color.toString(16).padStart(6, '0');
+
+    // Build text content
+    const nameStr = combined.name;
+    const descStr = combined.description;
+
+    // Stat summary
+    const stats = combined.stats;
+    const statParts: string[] = [];
+    if (stats.damage) statParts.push(`+${stats.damage} DMG`);
+    if (stats.damageMult) statParts.push(`+${Math.round(stats.damageMult * 100)}% DMG`);
+    if (stats.attackSpeed) statParts.push(`+${Math.round(stats.attackSpeed * 100)}% AS`);
+    if (stats.range) statParts.push(`+${stats.range} RNG`);
+    if (stats.critChance) statParts.push(`+${Math.round(stats.critChance * 100)}% Crit`);
+    if (stats.critMult) statParts.push(`${stats.critMult}x Crit`);
+    if (stats.splashFrac) statParts.push(`${Math.round(stats.splashFrac * 100)}% Splash`);
+    if (stats.slowAmount) statParts.push(`${Math.round(stats.slowAmount * 100)}% Slow`);
+    if (stats.burnDamage) statParts.push(`${stats.burnDamage} Burn`);
+    if (stats.bonusGoldOnKill) statParts.push(`+${stats.bonusGoldOnKill}g/kill`);
+
+    let cy = s(6);
+
+    const nameText = this.scene.add.text(s(6), cy, nameStr, {
+      fontSize: `${s(m.isMobile ? 9 : 11)}px`, color: colorHex, fontFamily: 'monospace', fontStyle: 'bold',
+    });
+    this.combinePreviewContainer.add(nameText);
+    cy += s(14);
+
+    const descText = this.scene.add.text(s(6), cy, descStr, {
+      fontSize: `${s(m.isMobile ? 8 : 9)}px`, color: '#aabbcc', fontFamily: 'monospace',
+      wordWrap: { width: tipW - s(12) },
+    });
+    this.combinePreviewContainer.add(descText);
+    cy += descText.height + s(4);
+
+    if (statParts.length > 0) {
+      const statText = this.scene.add.text(s(6), cy, statParts.join('  '), {
+        fontSize: `${s(m.isMobile ? 8 : 9)}px`, color: '#88ff88', fontFamily: 'monospace',
+        wordWrap: { width: tipW - s(12) },
+      });
+      this.combinePreviewContainer.add(statText);
+      cy += statText.height + s(4);
+    }
+
+    cy += s(2);
+
+    const bg = this.scene.add.rectangle(0, 0, tipW, cy, 0x111133, 0.95);
+    bg.setOrigin(0, 0);
+    bg.setStrokeStyle(s(1), color, 0.8);
+    this.combinePreviewContainer.addAt(bg, 0);
+  }
+
+  private hideCombinePreview(): void {
+    if (this.combinePreviewContainer) {
+      this.combinePreviewContainer.destroy();
+      this.combinePreviewContainer = null;
     }
   }
 

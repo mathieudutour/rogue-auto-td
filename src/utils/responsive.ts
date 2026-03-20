@@ -78,8 +78,8 @@ export function getLayout(width: number, height: number): LayoutMetrics {
   const shopFontSize = s(isMobile ? 10 : 11);
 
   // Bench — bigger touch targets on mobile
-  const benchSlotSize = s(isMobile ? 36 : 36);
-  const benchSlotGap = s(isMobile ? 3 : 5);
+  const benchSlotSize = s(isMobile ? 48 : 44);
+  const benchSlotGap = s(isMobile ? 4 : 6);
 
   // Items — bigger on mobile for touch
   const itemSlotSize = s(isMobile ? 28 : 24);
