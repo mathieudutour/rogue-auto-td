@@ -111,6 +111,9 @@ export class GameScene extends Phaser.Scene {
       this.economyManager.addXp(startXp);
     }
 
+    // Place portal at enemy entrance and shard at exit
+    this.createPathLandmarks();
+
     // Center camera on map
     const center = getMapCenter();
     const cam = this.cameras.main;
@@ -221,6 +224,80 @@ export class GameScene extends Phaser.Scene {
 
     // Disable right-click context menu
     this.game.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+
+  private shardSprite!: Phaser.GameObjects.Sprite;
+  private shardHpText!: Phaser.GameObjects.Text;
+
+  private createPathLandmarks(): void {
+    const start = this.pathGraph.getStartPoint();
+    const end = this.pathGraph.getEndPoint();
+
+    // Portal at enemy entrance
+    const portal = this.add.sprite(start.x, start.y - 12, 'portal');
+    portal.setDepth(start.y - 1);
+    portal.setScale(1.4);
+    this.tweens.add({
+      targets: portal,
+      scaleX: 1.5,
+      scaleY: 1.3,
+      alpha: { from: 0.8, to: 1 },
+      duration: 1500,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+
+    // Shard at exit (player base)
+    this.shardSprite = this.add.sprite(end.x, end.y - 16, 'shard');
+    this.shardSprite.setDepth(end.y + 10);
+    this.shardSprite.setScale(1.3);
+    this.tweens.add({
+      targets: this.shardSprite,
+      y: end.y - 18,
+      duration: 2000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+    // Subtle glow pulse
+    const glow = this.add.circle(end.x, end.y - 4, 18, 0x44ccff, 0.15);
+    glow.setDepth(end.y + 9);
+    this.tweens.add({
+      targets: glow,
+      scaleX: 1.5,
+      scaleY: 1.5,
+      alpha: 0.05,
+      duration: 2000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+
+    // HP text next to shard
+    this.shardHpText = this.add.text(end.x, end.y + 10, `${this.lives} HP`, {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+      color: '#ff6666',
+      stroke: '#000000',
+      strokeThickness: 3,
+    });
+    this.shardHpText.setOrigin(0.5, 0);
+    this.shardHpText.setDepth(end.y + 11);
+  }
+
+  updateShardHp(lives: number): void {
+    if (this.shardHpText) {
+      this.shardHpText.setText(`${lives} HP`);
+      // Flash on damage
+      this.tweens.add({
+        targets: this.shardSprite,
+        tint: { from: 0xff4444, to: 0xffffff },
+        duration: 300,
+        onComplete: () => this.shardSprite?.clearTint(),
+      });
+    }
   }
 
   startShoppingPhase(): void {
@@ -362,6 +439,7 @@ export class GameScene extends Phaser.Scene {
     this.lives -= enemy.damage;
     this.removeEnemy(enemy);
     this.events.emit('livesChanged', this.lives);
+    this.updateShardHp(this.lives);
 
     if (this.lives <= 0) {
       this.gameOver();

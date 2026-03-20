@@ -53,16 +53,14 @@ export class HUD {
     this.goldText.setScrollFactor(0).setDepth(1001);
 
     // Win streak indicator
-    this.streakText = scene.add.text(s(isMobile ? 60 : 120), yCenter + s(2), '', {
+    this.streakText = scene.add.text(s(isMobile ? 55 : 90), yCenter + s(2), '', {
       ...baseStyle, fontSize: `${fs}px`, color: '#ff9944',
     });
     this.streakText.setScrollFactor(0).setDepth(1001);
 
-    // Lives
-    this.livesText = scene.add.text(s(isMobile ? 100 : 190), yCenter, '', {
-      ...baseStyle, color: '#ff6666',
-    });
-    this.livesText.setScrollFactor(0).setDepth(1001);
+    // Lives — now displayed next to the shard on the map, hidden in HUD
+    this.livesText = scene.add.text(0, 0, '', { ...baseStyle });
+    this.livesText.setVisible(false);
 
     // Wave counter — center
     this.waveText = scene.add.text(w / 2, yCenter, '', {

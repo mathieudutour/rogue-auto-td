@@ -228,6 +228,7 @@ export class UIScene extends Phaser.Scene {
 
       if (champion) {
         icon.setTexture(champion.textureKey);
+        icon.setDisplaySize(this.layout.benchSlotSize - 6, this.layout.benchSlotSize - 6);
         icon.setVisible(true);
         starText.setText('\u2605'.repeat(champion.starLevel));
       } else {

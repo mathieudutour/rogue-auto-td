@@ -566,6 +566,47 @@ export function generateProjectileTextures(scene: Phaser.Scene): void {
   r.strokeCircle(64, 64, 64);
   r.generateTexture('range_indicator', 128, 128);
   r.destroy();
+
+  // ── Portal (enemy entrance) ──────────────────────────────
+  const portal = scene.make.graphics({ x: 0, y: 0 });
+  const pw = 40, ph = 48;
+  // Outer glow
+  portal.fillStyle(0x8833cc, 0.15);
+  portal.fillEllipse(pw / 2, ph / 2, 38, 46);
+  // Swirl ring
+  portal.lineStyle(3, 0xaa44ff, 0.6);
+  portal.strokeEllipse(pw / 2, ph / 2, 28, 36);
+  portal.lineStyle(2, 0xcc66ff, 0.4);
+  portal.strokeEllipse(pw / 2, ph / 2, 20, 28);
+  // Inner dark void
+  portal.fillStyle(0x110022, 0.8);
+  portal.fillEllipse(pw / 2, ph / 2, 14, 20);
+  // Core highlight
+  portal.fillStyle(0xcc88ff, 0.3);
+  portal.fillEllipse(pw / 2, ph / 2 - 4, 6, 8);
+  portal.generateTexture('portal', pw, ph);
+  portal.destroy();
+
+  // ── Shard (at enemy exit / player base) ──────────────────
+  const shard = scene.make.graphics({ x: 0, y: 0 });
+  const sw = 32, sh = 48;
+  // Ground glow
+  shard.fillStyle(0x44ccff, 0.12);
+  shard.fillEllipse(sw / 2, sh - 6, 28, 10);
+  // Crystal body
+  shard.fillStyle(0x22aaee, 0.9);
+  shard.fillTriangle(sw / 2, 4, sw / 2 - 8, sh - 10, sw / 2 + 8, sh - 10);
+  // Facet highlights
+  shard.fillStyle(0x66ddff, 0.5);
+  shard.fillTriangle(sw / 2, 6, sw / 2 - 3, sh / 2, sw / 2 + 4, sh / 2 - 4);
+  // Inner light
+  shard.fillStyle(0xaaeeff, 0.4);
+  shard.fillTriangle(sw / 2, 10, sw / 2 - 2, sh / 2 + 2, sw / 2 + 2, sh / 2);
+  // Outline
+  shard.lineStyle(1.5, 0x88ddff, 0.7);
+  shard.strokeTriangle(sw / 2, 4, sw / 2 - 8, sh - 10, sw / 2 + 8, sh - 10);
+  shard.generateTexture('shard', sw, sh);
+  shard.destroy();
 }
 
 // ─── UI Textures ────────────────────────────────────────────
