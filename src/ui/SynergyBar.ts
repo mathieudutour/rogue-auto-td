@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { TRAIT_COLORS } from '../utils/constants';
 import { ActiveSynergy } from '../systems/SynergyManager';
 import { SynergyData } from '../data/synergies';
+import { CHAMPIONS, ChampionData } from '../data/champions';
 import { Champion } from '../entities/Champion';
 import { getLayout, getDpr } from '../utils/responsive';
 
@@ -200,32 +201,50 @@ export class SynergyBar {
 
     cy += s(4);
 
-    // Champion portraits — show placed champions with this trait
-    const traitChamps = this.placedChampions.filter(c => c.traits.includes(data.id));
-    if (traitChamps.length > 0) {
-      // Deduplicate by champion ID (star upgrades merge)
-      const seen = new Set<string>();
-      const uniqueChamps: Champion[] = [];
-      for (const c of traitChamps) {
-        if (!seen.has(c.championId)) {
-          seen.add(c.championId);
-          uniqueChamps.push(c);
-        }
+    // Champion portraits — show ALL champions with this trait, owned ones bright, unowned dimmed
+    const allTraitChamps = CHAMPIONS.filter(c => c.traits.includes(data.id))
+      .sort((a, b) => a.cost - b.cost);
+
+    if (allTraitChamps.length > 0) {
+      // Build set of owned champion IDs (placed on board)
+      const ownedIds = new Set<string>();
+      for (const c of this.placedChampions) {
+        if (c.traits.includes(data.id)) ownedIds.add(c.championId);
       }
 
       const iconSize = s(20);
       const iconGap = s(4);
+      const tooltipInnerW = s(220);
       let cx = padX;
 
-      for (const champ of uniqueChamps) {
-        const sprite = this.scene.add.sprite(cx + iconSize / 2, cy + iconSize / 2, champ.textureKey);
+      for (const champData of allTraitChamps) {
+        const owned = ownedIds.has(champData.id);
+
+        // Wrap to next row if needed
+        if (cx + iconSize > padX + tooltipInnerW) {
+          cx = padX;
+          cy += iconSize + s(14);
+        }
+
+        const sprite = this.scene.add.sprite(cx + iconSize / 2, cy + iconSize / 2, champData.textureKey);
         sprite.setDisplaySize(iconSize, iconSize);
+        if (!owned) {
+          sprite.setAlpha(0.3);
+          sprite.setTint(0x556677);
+        }
         this.tooltipContainer.add(sprite);
         this.tooltipSprites.push(sprite);
 
+        // Cost indicator (small colored dot)
+        const costColors = [0xcccccc, 0x44cc44, 0x4488ff, 0xcc44cc, 0xffaa22];
+        const costDot = this.scene.add.circle(cx + iconSize - s(2), cy + s(2), s(3), costColors[champData.cost - 1] || 0xcccccc, owned ? 0.9 : 0.3);
+        this.tooltipContainer.add(costDot);
+        this.tooltipSprites.push(costDot as any);
+
         // Champion name label below portrait
-        const nameLabel = this.scene.add.text(cx + iconSize / 2, cy + iconSize + s(2), champ.name.split(' ').pop() || '', {
-          fontSize: `${s(7)}px`, fontFamily: 'monospace', color: '#aabbcc',
+        const shortName = champData.name.split(' ').pop() || '';
+        const nameLabel = this.scene.add.text(cx + iconSize / 2, cy + iconSize + s(1), shortName, {
+          fontSize: `${s(7)}px`, fontFamily: 'monospace', color: owned ? '#ccddee' : '#445566',
         });
         nameLabel.setOrigin(0.5, 0);
         this.tooltipContainer.add(nameLabel);
