@@ -23,6 +23,11 @@ function lighten(color: number, amount: number): number {
   return (r << 16) | (g << 8) | b;
 }
 
+/** Check if a texture key already exists (e.g. loaded from PNG) */
+function hasTexture(scene: Phaser.Scene, key: string): boolean {
+  return scene.textures.exists(key);
+}
+
 /** Simple pseudo-random for texture noise (deterministic per seed) */
 function noise(x: number, y: number, seed: number): number {
   let n = Math.sin(x * 12.9898 + y * 78.233 + seed) * 43758.5453;
@@ -68,6 +73,7 @@ function isInsideDiamond(px: number, py: number): boolean {
 export function generateTileTextures(scene: Phaser.Scene): void {
   // Grass (placeable) variants
   for (let v = 0; v < TILE_VARIANTS; v++) {
+    if (hasTexture(scene, `tile_placeable_${v}`)) continue;
     const g = scene.make.graphics({ x: 0, y: 0 });
     const base = COLORS.placeable;
 
@@ -121,6 +127,7 @@ export function generateTileTextures(scene: Phaser.Scene): void {
 
   // Dirt path variants
   for (let v = 0; v < TILE_VARIANTS; v++) {
+    if (hasTexture(scene, `tile_path_${v}`)) continue;
     const g = scene.make.graphics({ x: 0, y: 0 });
     const base = COLORS.path;
 
@@ -172,6 +179,7 @@ export function generateTileTextures(scene: Phaser.Scene): void {
 
   // Stone (blocked) variants
   for (let v = 0; v < TILE_VARIANTS; v++) {
+    if (hasTexture(scene, `tile_blocked_${v}`)) continue;
     const g = scene.make.graphics({ x: 0, y: 0 });
     const base = COLORS.blocked;
 
@@ -221,32 +229,40 @@ export function generateTileTextures(scene: Phaser.Scene): void {
   }
 
   // Hover overlay (yellow highlight, semi-transparent)
-  const hover = scene.make.graphics({ x: 0, y: 0 });
-  drawIsoDiamond(hover, COLORS.hover, 0.15);
-  drawIsoDiamondStroke(hover, COLORS.hover, 2, 1);
-  hover.generateTexture('tile_hover', TW, TH);
-  hover.destroy();
+  if (!hasTexture(scene, 'tile_hover')) {
+    const hover = scene.make.graphics({ x: 0, y: 0 });
+    drawIsoDiamond(hover, COLORS.hover, 0.15);
+    drawIsoDiamondStroke(hover, COLORS.hover, 2, 1);
+    hover.generateTexture('tile_hover', TW, TH);
+    hover.destroy();
+  }
 
   // Selected overlay (cyan)
-  const sel = scene.make.graphics({ x: 0, y: 0 });
-  drawIsoDiamond(sel, COLORS.selected, 0.12);
-  drawIsoDiamondStroke(sel, COLORS.selected, 2, 1);
-  sel.generateTexture('tile_selected', TW, TH);
-  sel.destroy();
+  if (!hasTexture(scene, 'tile_selected')) {
+    const sel = scene.make.graphics({ x: 0, y: 0 });
+    drawIsoDiamond(sel, COLORS.selected, 0.12);
+    drawIsoDiamondStroke(sel, COLORS.selected, 2, 1);
+    sel.generateTexture('tile_selected', TW, TH);
+    sel.destroy();
+  }
 
   // Drag valid overlay (green)
-  const dv = scene.make.graphics({ x: 0, y: 0 });
-  drawIsoDiamond(dv, 0x00ff00, 0.2);
-  drawIsoDiamondStroke(dv, 0x00ff00, 3, 1);
-  dv.generateTexture('tile_drag_valid', TW, TH);
-  dv.destroy();
+  if (!hasTexture(scene, 'tile_drag_valid')) {
+    const dv = scene.make.graphics({ x: 0, y: 0 });
+    drawIsoDiamond(dv, 0x00ff00, 0.2);
+    drawIsoDiamondStroke(dv, 0x00ff00, 3, 1);
+    dv.generateTexture('tile_drag_valid', TW, TH);
+    dv.destroy();
+  }
 
   // Drag invalid overlay (red)
-  const di = scene.make.graphics({ x: 0, y: 0 });
-  drawIsoDiamond(di, 0xff0000, 0.2);
-  drawIsoDiamondStroke(di, 0xff0000, 3, 1);
-  di.generateTexture('tile_drag_invalid', TW, TH);
-  di.destroy();
+  if (!hasTexture(scene, 'tile_drag_invalid')) {
+    const di = scene.make.graphics({ x: 0, y: 0 });
+    drawIsoDiamond(di, 0xff0000, 0.2);
+    drawIsoDiamondStroke(di, 0xff0000, 3, 1);
+    di.generateTexture('tile_drag_invalid', TW, TH);
+    di.destroy();
+  }
 }
 
 // ─── Champion Textures ──────────────────────────────────────
@@ -354,6 +370,7 @@ export function generateChampionTextures(scene: Phaser.Scene): void {
   ];
 
   for (const champ of champions) {
+    if (hasTexture(scene, champ.key)) continue;
     const g = scene.make.graphics({ x: 0, y: 0 });
     const elementColor = TRAIT_COLORS[champ.element] || 0xcccccc;
     const cx = 16, cy = 16;
@@ -398,81 +415,82 @@ export function generateChampionTextures(scene: Phaser.Scene): void {
   }
 
   // Default champion
-  const g = scene.make.graphics({ x: 0, y: 0 });
-  g.fillStyle(0xcccccc, 1);
-  g.fillRoundedRect(9, 13, 14, 12, 3);
-  g.fillCircle(16, 9, 5);
-  g.lineStyle(1.5, 0x000000, 0.5);
-  g.strokeCircle(16, 9, 5.5);
-  g.strokeRoundedRect(8.5, 12.5, 15, 13, 3);
-  g.generateTexture('champion_default', 32, 32);
-  g.destroy();
+  if (!hasTexture(scene, 'champion_default')) {
+    const g = scene.make.graphics({ x: 0, y: 0 });
+    g.fillStyle(0xcccccc, 1);
+    g.fillRoundedRect(9, 13, 14, 12, 3);
+    g.fillCircle(16, 9, 5);
+    g.lineStyle(1.5, 0x000000, 0.5);
+    g.strokeCircle(16, 9, 5.5);
+    g.strokeRoundedRect(8.5, 12.5, 15, 13, 3);
+    g.generateTexture('champion_default', 32, 32);
+    g.destroy();
+  }
 }
 
 // ─── Enemy Textures ─────────────────────────────────────────
 
 export function generateEnemyTextures(scene: Phaser.Scene): void {
   // Goblin (basic) — small hunched figure
-  const basic = scene.make.graphics({ x: 0, y: 0 });
-  const bc = COLORS.enemyBasic;
-  basic.fillStyle(bc, 1);
-  basic.fillRoundedRect(7, 10, 14, 12, 2); // body
-  basic.fillStyle(lighten(bc, 0.1), 1);
-  basic.fillCircle(14, 8, 4); // head
-  // Eyes
-  basic.fillStyle(0xffff00, 1);
-  basic.fillCircle(13, 7, 1);
-  basic.fillCircle(16, 7, 1);
-  // Outline
-  basic.lineStyle(1, darken(bc, 0.2), 0.7);
-  basic.strokeRoundedRect(7, 10, 14, 12, 2);
-  basic.strokeCircle(14, 8, 4);
-  basic.generateTexture('enemy_basic', 28, 28);
-  basic.destroy();
+  if (!hasTexture(scene, 'enemy_basic')) {
+    const basic = scene.make.graphics({ x: 0, y: 0 });
+    const bc = COLORS.enemyBasic;
+    basic.fillStyle(bc, 1);
+    basic.fillRoundedRect(7, 10, 14, 12, 2); // body
+    basic.fillStyle(lighten(bc, 0.1), 1);
+    basic.fillCircle(14, 8, 4); // head
+    basic.fillStyle(0xffff00, 1);
+    basic.fillCircle(13, 7, 1);
+    basic.fillCircle(16, 7, 1);
+    basic.lineStyle(1, darken(bc, 0.2), 0.7);
+    basic.strokeRoundedRect(7, 10, 14, 12, 2);
+    basic.strokeCircle(14, 8, 4);
+    basic.generateTexture('enemy_basic', 28, 28);
+    basic.destroy();
+  }
 
   // Wolf (fast) — low horizontal shape
-  const fast = scene.make.graphics({ x: 0, y: 0 });
-  const fc = COLORS.enemyFast;
-  fast.fillStyle(fc, 1);
-  fast.fillRoundedRect(3, 12, 22, 10, 3); // long body
-  fast.fillStyle(lighten(fc, 0.1), 1);
-  fast.fillCircle(21, 11, 4); // head
-  // Ears
-  fast.fillStyle(fc, 1);
-  fast.fillTriangle(19, 7, 21, 5, 23, 7);
-  // Eye
-  fast.fillStyle(0xff0000, 1);
-  fast.fillCircle(22, 10, 1);
-  // Tail
-  fast.lineStyle(2, darken(fc, 0.1), 1);
-  fast.lineBetween(3, 14, 1, 10);
-  fast.lineStyle(1, darken(fc, 0.2), 0.7);
-  fast.strokeRoundedRect(3, 12, 22, 10, 3);
-  fast.generateTexture('enemy_fast', 28, 28);
-  fast.destroy();
+  if (!hasTexture(scene, 'enemy_fast')) {
+    const fast = scene.make.graphics({ x: 0, y: 0 });
+    const fc = COLORS.enemyFast;
+    fast.fillStyle(fc, 1);
+    fast.fillRoundedRect(3, 12, 22, 10, 3); // long body
+    fast.fillStyle(lighten(fc, 0.1), 1);
+    fast.fillCircle(21, 11, 4); // head
+    fast.fillStyle(fc, 1);
+    fast.fillTriangle(19, 7, 21, 5, 23, 7);
+    fast.fillStyle(0xff0000, 1);
+    fast.fillCircle(22, 10, 1);
+    fast.lineStyle(2, darken(fc, 0.1), 1);
+    fast.lineBetween(3, 14, 1, 10);
+    fast.lineStyle(1, darken(fc, 0.2), 0.7);
+    fast.strokeRoundedRect(3, 12, 22, 10, 3);
+    fast.generateTexture('enemy_fast', 28, 28);
+    fast.destroy();
+  }
 
   // Ogre (tank) — wide bulky shape
-  const tank = scene.make.graphics({ x: 0, y: 0 });
-  const tc = COLORS.enemyTank;
-  tank.fillStyle(tc, 1);
-  tank.fillRoundedRect(3, 8, 22, 16, 4); // wide body
-  tank.fillStyle(lighten(tc, 0.1), 1);
-  tank.fillCircle(14, 7, 5); // head
-  // Eyes
-  tank.fillStyle(0xff4444, 1);
-  tank.fillCircle(12, 6, 1.5);
-  tank.fillCircle(16, 6, 1.5);
-  // Body detail — belt
-  tank.fillStyle(darken(tc, 0.15), 0.6);
-  tank.fillRect(5, 15, 18, 3);
-  // Outline
-  tank.lineStyle(1.5, darken(tc, 0.25), 0.7);
-  tank.strokeRoundedRect(3, 8, 22, 16, 4);
-  tank.strokeCircle(14, 7, 5);
-  tank.generateTexture('enemy_tank', 28, 28);
-  tank.destroy();
+  if (!hasTexture(scene, 'enemy_tank')) {
+    const tank = scene.make.graphics({ x: 0, y: 0 });
+    const tc = COLORS.enemyTank;
+    tank.fillStyle(tc, 1);
+    tank.fillRoundedRect(3, 8, 22, 16, 4); // wide body
+    tank.fillStyle(lighten(tc, 0.1), 1);
+    tank.fillCircle(14, 7, 5); // head
+    tank.fillStyle(0xff4444, 1);
+    tank.fillCircle(12, 6, 1.5);
+    tank.fillCircle(16, 6, 1.5);
+    tank.fillStyle(darken(tc, 0.15), 0.6);
+    tank.fillRect(5, 15, 18, 3);
+    tank.lineStyle(1.5, darken(tc, 0.25), 0.7);
+    tank.strokeRoundedRect(3, 8, 22, 16, 4);
+    tank.strokeCircle(14, 7, 5);
+    tank.generateTexture('enemy_tank', 28, 28);
+    tank.destroy();
+  }
 
   // Dragon (boss) — tall with wings
+  if (!hasTexture(scene, 'enemy_boss')) {
   const boss = scene.make.graphics({ x: 0, y: 0 });
   const bossC = COLORS.enemyBoss;
   boss.fillStyle(bossC, 1);
@@ -496,141 +514,106 @@ export function generateEnemyTextures(scene: Phaser.Scene): void {
   boss.strokeRoundedRect(8, 10, 12, 14, 3);
   boss.generateTexture('enemy_boss', 28, 28);
   boss.destroy();
+  }
 }
 
 // ─── Projectile Textures ────────────────────────────────────
 
 export function generateProjectileTextures(scene: Phaser.Scene): void {
-  // Normal (yellow with glow)
-  const g = scene.make.graphics({ x: 0, y: 0 });
-  g.fillStyle(0xffff88, 0.3);
-  g.fillCircle(5, 5, 5);
-  g.fillStyle(0xffff00, 1);
-  g.fillCircle(5, 5, 3);
-  g.fillStyle(0xffffff, 0.6);
-  g.fillCircle(4, 4, 1);
-  g.generateTexture('projectile', 10, 10);
-  g.destroy();
+  if (!hasTexture(scene, 'projectile')) {
+    const g = scene.make.graphics({ x: 0, y: 0 });
+    g.fillStyle(0xffff88, 0.3); g.fillCircle(5, 5, 5);
+    g.fillStyle(0xffff00, 1); g.fillCircle(5, 5, 3);
+    g.fillStyle(0xffffff, 0.6); g.fillCircle(4, 4, 1);
+    g.generateTexture('projectile', 10, 10); g.destroy();
+  }
 
-  // Splash (orange fireball)
-  const sp = scene.make.graphics({ x: 0, y: 0 });
-  sp.fillStyle(0xff4400, 0.3);
-  sp.fillCircle(6, 6, 6);
-  sp.fillStyle(0xff6600, 1);
-  sp.fillCircle(6, 6, 4);
-  sp.fillStyle(0xffaa00, 0.8);
-  sp.fillCircle(5, 5, 2);
-  sp.fillStyle(0xffff00, 0.5);
-  sp.fillCircle(5, 4, 1);
-  sp.generateTexture('projectile_splash', 12, 12);
-  sp.destroy();
+  if (!hasTexture(scene, 'projectile_splash')) {
+    const sp = scene.make.graphics({ x: 0, y: 0 });
+    sp.fillStyle(0xff4400, 0.3); sp.fillCircle(6, 6, 6);
+    sp.fillStyle(0xff6600, 1); sp.fillCircle(6, 6, 4);
+    sp.fillStyle(0xffaa00, 0.8); sp.fillCircle(5, 5, 2);
+    sp.fillStyle(0xffff00, 0.5); sp.fillCircle(5, 4, 1);
+    sp.generateTexture('projectile_splash', 12, 12); sp.destroy();
+  }
 
-  // Slow (blue crystal)
-  const sl = scene.make.graphics({ x: 0, y: 0 });
-  sl.fillStyle(0x2266ff, 0.3);
-  sl.fillCircle(5, 5, 5);
-  sl.fillStyle(0x4488ff, 1);
-  sl.fillCircle(5, 5, 3);
-  sl.fillStyle(0xaaddff, 0.7);
-  sl.fillCircle(4, 4, 1.5);
-  sl.generateTexture('projectile_slow', 10, 10);
-  sl.destroy();
+  if (!hasTexture(scene, 'projectile_slow')) {
+    const sl = scene.make.graphics({ x: 0, y: 0 });
+    sl.fillStyle(0x2266ff, 0.3); sl.fillCircle(5, 5, 5);
+    sl.fillStyle(0x4488ff, 1); sl.fillCircle(5, 5, 3);
+    sl.fillStyle(0xaaddff, 0.7); sl.fillCircle(4, 4, 1.5);
+    sl.generateTexture('projectile_slow', 10, 10); sl.destroy();
+  }
 
-  // Chain (electric spark)
-  const ch = scene.make.graphics({ x: 0, y: 0 });
-  ch.fillStyle(0x6688ff, 0.3);
-  ch.fillCircle(5, 5, 5);
-  ch.fillStyle(0x88aaff, 1);
-  ch.fillCircle(5, 5, 3);
-  ch.fillStyle(0xffffff, 0.9);
-  ch.fillCircle(5, 5, 1.5);
-  ch.generateTexture('projectile_chain', 10, 10);
-  ch.destroy();
+  if (!hasTexture(scene, 'projectile_chain')) {
+    const ch = scene.make.graphics({ x: 0, y: 0 });
+    ch.fillStyle(0x6688ff, 0.3); ch.fillCircle(5, 5, 5);
+    ch.fillStyle(0x88aaff, 1); ch.fillCircle(5, 5, 3);
+    ch.fillStyle(0xffffff, 0.9); ch.fillCircle(5, 5, 1.5);
+    ch.generateTexture('projectile_chain', 10, 10); ch.destroy();
+  }
 
-  // DoT (poison drop)
-  const dt = scene.make.graphics({ x: 0, y: 0 });
-  dt.fillStyle(0x22aa22, 0.3);
-  dt.fillCircle(5, 5, 5);
-  dt.fillStyle(0x44ff44, 1);
-  dt.fillCircle(5, 5, 3);
-  dt.fillStyle(0x88ff88, 0.6);
-  dt.fillCircle(4, 4, 1.5);
-  dt.generateTexture('projectile_dot', 10, 10);
-  dt.destroy();
+  if (!hasTexture(scene, 'projectile_dot')) {
+    const dt = scene.make.graphics({ x: 0, y: 0 });
+    dt.fillStyle(0x22aa22, 0.3); dt.fillCircle(5, 5, 5);
+    dt.fillStyle(0x44ff44, 1); dt.fillCircle(5, 5, 3);
+    dt.fillStyle(0x88ff88, 0.6); dt.fillCircle(4, 4, 1.5);
+    dt.generateTexture('projectile_dot', 10, 10); dt.destroy();
+  }
 
-  // Range indicator
-  const r = scene.make.graphics({ x: 0, y: 0 });
-  r.fillStyle(0xffffff, 0.08);
-  r.fillCircle(64, 64, 64);
-  r.lineStyle(1, 0xffffff, 0.25);
-  r.strokeCircle(64, 64, 64);
-  r.generateTexture('range_indicator', 128, 128);
-  r.destroy();
+  if (!hasTexture(scene, 'range_indicator')) {
+    const r = scene.make.graphics({ x: 0, y: 0 });
+    r.fillStyle(0xffffff, 0.08); r.fillCircle(64, 64, 64);
+    r.lineStyle(1, 0xffffff, 0.25); r.strokeCircle(64, 64, 64);
+    r.generateTexture('range_indicator', 128, 128); r.destroy();
+  }
 
   // ── Portal (enemy entrance) ──────────────────────────────
-  const portal = scene.make.graphics({ x: 0, y: 0 });
-  const pw = 40, ph = 48;
-  // Outer glow
-  portal.fillStyle(0x8833cc, 0.15);
-  portal.fillEllipse(pw / 2, ph / 2, 38, 46);
-  // Swirl ring
-  portal.lineStyle(3, 0xaa44ff, 0.6);
-  portal.strokeEllipse(pw / 2, ph / 2, 28, 36);
-  portal.lineStyle(2, 0xcc66ff, 0.4);
-  portal.strokeEllipse(pw / 2, ph / 2, 20, 28);
-  // Inner dark void
-  portal.fillStyle(0x110022, 0.8);
-  portal.fillEllipse(pw / 2, ph / 2, 14, 20);
-  // Core highlight
-  portal.fillStyle(0xcc88ff, 0.3);
-  portal.fillEllipse(pw / 2, ph / 2 - 4, 6, 8);
-  portal.generateTexture('portal', pw, ph);
-  portal.destroy();
+  if (!hasTexture(scene, 'portal')) {
+    const portal = scene.make.graphics({ x: 0, y: 0 });
+    const pw = 40, ph = 48;
+    portal.fillStyle(0x8833cc, 0.15); portal.fillEllipse(pw / 2, ph / 2, 38, 46);
+    portal.lineStyle(3, 0xaa44ff, 0.6); portal.strokeEllipse(pw / 2, ph / 2, 28, 36);
+    portal.lineStyle(2, 0xcc66ff, 0.4); portal.strokeEllipse(pw / 2, ph / 2, 20, 28);
+    portal.fillStyle(0x110022, 0.8); portal.fillEllipse(pw / 2, ph / 2, 14, 20);
+    portal.fillStyle(0xcc88ff, 0.3); portal.fillEllipse(pw / 2, ph / 2 - 4, 6, 8);
+    portal.generateTexture('portal', pw, ph); portal.destroy();
+  }
 
   // ── Shard (at enemy exit / player base) ──────────────────
-  const shard = scene.make.graphics({ x: 0, y: 0 });
-  const sw = 32, sh = 48;
-  // Ground glow
-  shard.fillStyle(0x44ccff, 0.12);
-  shard.fillEllipse(sw / 2, sh - 6, 28, 10);
-  // Crystal body
-  shard.fillStyle(0x22aaee, 0.9);
-  shard.fillTriangle(sw / 2, 4, sw / 2 - 8, sh - 10, sw / 2 + 8, sh - 10);
-  // Facet highlights
-  shard.fillStyle(0x66ddff, 0.5);
-  shard.fillTriangle(sw / 2, 6, sw / 2 - 3, sh / 2, sw / 2 + 4, sh / 2 - 4);
-  // Inner light
-  shard.fillStyle(0xaaeeff, 0.4);
-  shard.fillTriangle(sw / 2, 10, sw / 2 - 2, sh / 2 + 2, sw / 2 + 2, sh / 2);
-  // Outline
-  shard.lineStyle(1.5, 0x88ddff, 0.7);
-  shard.strokeTriangle(sw / 2, 4, sw / 2 - 8, sh - 10, sw / 2 + 8, sh - 10);
-  shard.generateTexture('shard', sw, sh);
-  shard.destroy();
+  if (!hasTexture(scene, 'shard')) {
+    const shard = scene.make.graphics({ x: 0, y: 0 });
+    const sw = 32, sh = 48;
+    shard.fillStyle(0x44ccff, 0.12); shard.fillEllipse(sw / 2, sh - 6, 28, 10);
+    shard.fillStyle(0x22aaee, 0.9);
+    shard.fillTriangle(sw / 2, 4, sw / 2 - 8, sh - 10, sw / 2 + 8, sh - 10);
+    shard.fillStyle(0x66ddff, 0.5);
+    shard.fillTriangle(sw / 2, 6, sw / 2 - 3, sh / 2, sw / 2 + 4, sh / 2 - 4);
+    shard.fillStyle(0xaaeeff, 0.4);
+    shard.fillTriangle(sw / 2, 10, sw / 2 - 2, sh / 2 + 2, sw / 2 + 2, sh / 2);
+    shard.lineStyle(1.5, 0x88ddff, 0.7);
+    shard.strokeTriangle(sw / 2, 4, sw / 2 - 8, sh - 10, sw / 2 + 8, sh - 10);
+    shard.generateTexture('shard', sw, sh); shard.destroy();
+  }
 }
 
 // ─── UI Textures ────────────────────────────────────────────
 
 export function generateUITextures(scene: Phaser.Scene): void {
-  // Star icon
-  const s = scene.make.graphics({ x: 0, y: 0 });
-  s.fillStyle(COLORS.gold, 1);
-  s.fillCircle(8, 8, 6);
-  s.fillStyle(lighten(COLORS.gold, 0.3), 0.6);
-  s.fillCircle(7, 7, 2);
-  s.generateTexture('star_icon', 16, 16);
-  s.destroy();
+  if (!hasTexture(scene, 'star_icon')) {
+    const s = scene.make.graphics({ x: 0, y: 0 });
+    s.fillStyle(COLORS.gold, 1); s.fillCircle(8, 8, 6);
+    s.fillStyle(lighten(COLORS.gold, 0.3), 0.6); s.fillCircle(7, 7, 2);
+    s.generateTexture('star_icon', 16, 16); s.destroy();
+  }
 
-  // Gold coin
-  const gc = scene.make.graphics({ x: 0, y: 0 });
-  gc.fillStyle(COLORS.gold, 1);
-  gc.fillCircle(8, 8, 7);
-  gc.lineStyle(1, darken(COLORS.gold, 0.2), 1);
-  gc.strokeCircle(8, 8, 7);
-  gc.fillStyle(lighten(COLORS.gold, 0.2), 0.5);
-  gc.fillCircle(7, 7, 3);
-  gc.generateTexture('gold_icon', 16, 16);
-  gc.destroy();
+  if (!hasTexture(scene, 'gold_icon')) {
+    const gc = scene.make.graphics({ x: 0, y: 0 });
+    gc.fillStyle(COLORS.gold, 1); gc.fillCircle(8, 8, 7);
+    gc.lineStyle(1, darken(COLORS.gold, 0.2), 1); gc.strokeCircle(8, 8, 7);
+    gc.fillStyle(lighten(COLORS.gold, 0.2), 0.5); gc.fillCircle(7, 7, 3);
+    gc.generateTexture('gold_icon', 16, 16); gc.destroy();
+  }
 }
 
 // ─── Item Textures ──────────────────────────────────────────
@@ -640,6 +623,7 @@ export function generateItemTextures(scene: Phaser.Scene): void {
 
   // Components: rounded square with diamond icon inside
   for (const comp of COMPONENTS) {
+    if (hasTexture(scene, `item_${comp.id}`)) continue;
     const g = scene.make.graphics({ x: 0, y: 0 });
     // Background
     g.fillStyle(darken(comp.color, 0.3), 1);
@@ -661,6 +645,7 @@ export function generateItemTextures(scene: Phaser.Scene): void {
 
   // Combined items: rounded square with star icon inside
   for (const item of COMBINED_ITEMS) {
+    if (hasTexture(scene, `item_${item.id}`)) continue;
     const g = scene.make.graphics({ x: 0, y: 0 });
     // Background with gradient feel
     g.fillStyle(darken(item.color, 0.2), 1);
