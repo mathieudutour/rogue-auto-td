@@ -83,6 +83,7 @@ export class ItemPanel {
         this.dragStartY = pointer.y;
         this.isDragging = false;
         this.hideTooltip();
+        gameScene.uiDragActive = true;
       }
     });
 
@@ -209,6 +210,7 @@ export class ItemPanel {
     this.dragIndex = -1;
     this.isDragging = false;
     this.update(gameScene.itemInventory);
+    gameScene.uiDragActive = false;
   }
 
   private showTooltip(item: HeldItem, x: number, y: number): void {

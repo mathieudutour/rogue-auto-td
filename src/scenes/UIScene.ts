@@ -273,6 +273,7 @@ export class UIScene extends Phaser.Scene {
         this.dragStartX = pointer.x;
         this.dragStartY = pointer.y;
         this.isDragging = false;
+        gameScene.uiDragActive = true;
       } else {
         this.tooltip.hide();
       }
@@ -325,6 +326,7 @@ export class UIScene extends Phaser.Scene {
         this.dragChampion = null;
         this.dragFromBenchIndex = -1;
         this.dragFromBoard = false;
+        gameScene.uiDragActive = false;
         return;
       }
 
@@ -521,6 +523,8 @@ export class UIScene extends Phaser.Scene {
     this.dragFromBenchIndex = -1;
     this.dragFromBoard = false;
     this.isDragging = false;
+    const gameScene = this.scene.get('GameScene') as GameScene;
+    gameScene.uiDragActive = false;
   }
 
   private getBenchSlotAt(screenX: number, screenY: number): number {

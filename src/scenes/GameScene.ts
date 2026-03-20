@@ -51,6 +51,9 @@ export class GameScene extends Phaser.Scene {
   // Placement state
   placingChampion: Champion | null = null;
 
+  // Camera pan state — UIScene sets this to suppress panning during champion drag
+  uiDragActive: boolean = false;
+
   constructor() {
     super({ key: 'GameScene' });
   }
@@ -132,29 +135,89 @@ export class GameScene extends Phaser.Scene {
     let dragStartY = 0;
     let camStartX = 0;
     let camStartY = 0;
+    let isPanning = false;
+    const PAN_THRESHOLD = 8; // px before a touch becomes a pan
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      // Right/middle click always starts camera pan immediately
       if (pointer.button === 1 || pointer.button === 2) {
         dragStartX = pointer.x;
         dragStartY = pointer.y;
         camStartX = cam.scrollX;
         camStartY = cam.scrollY;
+        isPanning = true;
+        return;
+      }
+      // Left click / touch: record start for potential pan
+      if (pointer.button === 0) {
+        dragStartX = pointer.x;
+        dragStartY = pointer.y;
+        camStartX = cam.scrollX;
+        camStartY = cam.scrollY;
+        isPanning = false;
       }
     });
 
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.isDown && (pointer.button === 1 || pointer.button === 2 || pointer.rightButtonDown())) {
+      if (!pointer.isDown) return;
+
+      // Right/middle button pan (desktop)
+      if (isPanning && (pointer.button === 1 || pointer.button === 2 || pointer.rightButtonDown())) {
         const dx = (pointer.x - dragStartX) / cam.zoom;
         const dy = (pointer.y - dragStartY) / cam.zoom;
         cam.scrollX = camStartX - dx;
         cam.scrollY = camStartY - dy;
+        return;
       }
+
+      // Left click / touch pan — only if UI isn't dragging a champion
+      if (pointer.button === 0 && !this.uiDragActive) {
+        const dx = pointer.x - dragStartX;
+        const dy = pointer.y - dragStartY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (!isPanning && dist >= PAN_THRESHOLD) {
+          isPanning = true;
+        }
+
+        if (isPanning) {
+          cam.scrollX = camStartX - dx / cam.zoom;
+          cam.scrollY = camStartY - dy / cam.zoom;
+        }
+      }
+    });
+
+    this.input.on('pointerup', () => {
+      isPanning = false;
     });
 
     this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gx: number, _gy: number, _gz: number, dy: number) => {
       const newZoom = Phaser.Math.Clamp(cam.zoom - dy * 0.001, 0.5, 3);
       cam.setZoom(newZoom);
     });
+
+    // Pinch-to-zoom on mobile
+    let lastPinchDist = 0;
+    let pinchZoomStart = 0;
+    this.game.canvas.addEventListener('touchstart', (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        lastPinchDist = Math.sqrt(dx * dx + dy * dy);
+        pinchZoomStart = cam.zoom;
+      }
+    }, { passive: true });
+    this.game.canvas.addEventListener('touchmove', (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (lastPinchDist > 0) {
+          const scale = dist / lastPinchDist;
+          cam.setZoom(Phaser.Math.Clamp(pinchZoomStart * scale, 0.5, 3));
+        }
+      }
+    }, { passive: true });
 
     // Disable right-click context menu
     this.game.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
